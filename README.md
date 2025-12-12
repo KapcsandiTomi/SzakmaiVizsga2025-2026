@@ -1,2 +1,2 @@
-# SzakmaiVizsga2025-2026
-SzakmaiVizsga2025/2026 - HAJAS MÁTÉ, KAPCSÁNDI TAMÁS, HRUSTINSZKI MÁRTON ----- FÜLEKI JÓZSEF
+# KT_HM_HM_VizsgaRemek
+Szakami vizsga
