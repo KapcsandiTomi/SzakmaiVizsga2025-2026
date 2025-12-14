@@ -1,0 +1,28 @@
+<?php
+require '../config.php';
+session_start();
+
+// JSON adat feldolgozása
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
+
+if (!isset($data['item_id'])) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Missing item_id']);
+    exit;
+}
+
+$item_id = (int)$data['item_id'];
+
+$stmt = $conn->prepare("DELETE FROM pc_configuration_items WHERE id = ?");
+$stmt->bind_param("i", $item_id);
+
+if ($stmt->execute()) {
+    echo json_encode(['success' => true, 'deleted_id' => $item_id]);
+} else {
+    http_response_code(500);
+    echo json_encode(['error' => 'Delete failed']);
+}
+
+$stmt->close();
+?>

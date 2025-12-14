@@ -1,0 +1,1100 @@
+<?php
+require '../config.php';
+session_start();
+
+// Ellenőrizzük, hogy be van-e jelentkezve
+if (!isset($_SESSION['email'])) {
+    header("Location: ../login.php");
+    exit();
+}
+
+// ====================
+// PC KONFIGURÁCIÓ BETÖLTÉSE
+// ====================
+$sid = session_id();
+
+$stmt = $conn->prepare("
+    SELECT p.id, p.name, p.price, c.name as category_name
+    FROM pc_configuration_items ci
+    JOIN pc_products p ON p.id = ci.product_id
+    JOIN pc_categories c ON c.id = p.category_id
+    JOIN pc_configurations conf ON conf.id = ci.configuration_id
+    WHERE conf.session_id = ?
+    ORDER BY c.id
+");
+
+if (!$stmt) {
+    die("Database error: " . $conn->error);
+}
+
+$stmt->bind_param("s", $sid);
+$stmt->execute();
+$result = $stmt->get_result();
+
+$order_list = [];
+$subTotal = 0.0;
+
+while ($row = $result->fetch_assoc()) {
+    $order_list[] = [
+        'id' => $row['id'],
+        'name' => htmlspecialchars($row['name']),
+        'category' => htmlspecialchars($row['category_name']),
+        'price' => (float)$row['price'],
+        'quantity' => 1
+    ];
+    $subTotal += $row['price'];
+}
+
+$stmt->close();
+
+// Ha nincs termék a konfigurációban, visszairányítjuk
+if (empty($order_list)) {
+    header("Location: index.php");
+    exit();
+}
+
+// ====================
+// KUPON BEÁLLÍTÁSOK
+// ====================
+$validCoupons = [
+    'SUMMER10' => 0.10,
+    'FREESHIP' => 'FREESHIP',
+    'PCBUILD5' => 0.05  // PC build speciális kupon
+];
+
+$shippingFlat = 4.99;
+$freeShippingOver = 50.00;
+
+// ====================
+// CSRF TOKEN
+// ====================
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
+}
+
+// ====================
+// VÁLTOZÓK INICIALIZÁLÁS
+// ====================
+$success = false;
+$error = "";
+$appliedCoupon = null;
+$discountAmount = 0.0;
+$shippingCost = ($subTotal >= $freeShippingOver) ? 0.0 : $shippingFlat;
+$orderId = null;
+
+// ====================
+// FORM FELDOLGOZÁS
+// ====================
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // CSRF ellenőrzés
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error = "Invalid request. Please try again.";
+    } else {
+        // Adatok kinyerése
+        $name = trim($_POST["fullname"] ?? "");
+        $email = trim($_POST["email"] ?? "");
+        $address = trim($_POST["address"] ?? "");
+        $cardType = trim($_POST["card_type"] ?? "");
+        $cardNumber = preg_replace('/\D/', '', $_POST["card_number"] ?? "");
+        $expiry = trim($_POST["expiry"] ?? "");
+        $cvv = preg_replace('/\D/', '', $_POST["cvv"] ?? "");
+        $terms = isset($_POST['terms']) ? true : false;
+        $coupon = trim($_POST['coupon'] ?? "");
+
+        // ====================
+        // VALIDÁCIÓ
+        // ====================
+        $errors = [];
+        
+        if (empty($name)) $errors[] = "Full name is required";
+        if (empty($email)) $errors[] = "Email address is required";
+        if (empty($address)) $errors[] = "Shipping address is required";
+        if (empty($cardType)) $errors[] = "Card type is required";
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Invalid email address";
+        if (!preg_match('/^\d{12}$/', $cardNumber)) $errors[] = "Card number must be exactly 12 digits";
+        if (!preg_match('/^\d{3}$/', $cvv)) $errors[] = "CVV must be exactly 3 digits";
+        if (!preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expiry)) $errors[] = "Invalid expiry format (MM/YY)";
+        if (!$terms) $errors[] = "You must accept the Terms & Conditions and Privacy Policy";
+
+        if (!empty($errors)) {
+            $error = implode("<br>", $errors);
+        } else {
+            // ====================
+            // KUPON FELDOLGOZÁS
+            // ====================
+            if (!empty($coupon) && isset($validCoupons[$coupon])) {
+                $appliedCoupon = $coupon;
+                if ($validCoupons[$coupon] === 'FREESHIP') {
+                    $shippingCost = 0.0;
+                } else {
+                    $discountAmount = $subTotal * floatval($validCoupons[$coupon]);
+                }
+            }
+
+            // ====================
+            // VÉGÖSSZEG SZÁMÍTÁS
+            // ====================
+            $totalPrice = round($subTotal - $discountAmount + $shippingCost, 2);
+            $cardNumberMasked = 'XXXX-XXXX-' . substr($cardNumber, -4);
+            $cvvMasked = '***';
+            
+            // ====================
+            // RENDELÉS ADATOK KÉSZÍTÉS
+            // ====================
+            $orderDataArray = [
+                'type' => 'pc_configuration',
+                'items' => $order_list,
+                'coupon' => $appliedCoupon,
+                'discount' => $discountAmount,
+                'shipping_cost' => $shippingCost,
+                'subtotal' => $subTotal,
+                'session_id' => $sid,
+                'config_date' => date('Y-m-d H:i:s')
+            ];
+            
+            $orderData = json_encode($orderDataArray, JSON_UNESCAPED_UNICODE);
+
+            // ====================
+            // ADATBÁZIS MŰVELET - PC KONFIGURÁCIÓ
+            // ====================
+            try {
+                $stmt = $conn->prepare("INSERT INTO orders 
+                    (customer_name, customer_email, customer_address, card_type, card_number, expiry, cvv, order_data, total_price, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PC Configuration Ordered', NOW())");
+                
+                if ($stmt === false) {
+                    throw new Exception("Database error: " . $conn->error);
+                }
+                
+                $stmt->bind_param(
+                    "ssssssssd",
+                    $name,
+                    $email,
+                    $address,
+                    $cardType,
+                    $cardNumberMasked,
+                    $expiry,
+                    $cvvMasked,
+                    $orderData,
+                    $totalPrice
+                );
+
+                if ($stmt->execute()) {
+                    $orderId = $conn->insert_id;
+                    
+                    // ====================
+                    // KONFIGURÁCIÓ TÖRLÉSE
+                    // ====================
+                    // Először a tételeket töröljük
+                    $deleteItems = $conn->prepare("
+                        DELETE ci FROM pc_configuration_items ci
+                        JOIN pc_configurations c ON c.id = ci.configuration_id
+                        WHERE c.session_id = ?
+                    ");
+                    $deleteItems->bind_param("s", $sid);
+                    $deleteItems->execute();
+                    $deleteItems->close();
+                    
+                    // Majd magát a konfigurációt
+                    $deleteConfig = $conn->prepare("DELETE FROM pc_configurations WHERE session_id = ?");
+                    $deleteConfig->bind_param("s", $sid);
+                    $deleteConfig->execute();
+                    $deleteConfig->close();
+                    
+                    // ====================
+                    // KUPON NAplózása
+                    // ====================
+                    if ($appliedCoupon) {
+                        $couponLog = date('Y-m-d H:i:s') . " | PC Config #$orderId | User: $email | Coupon: $appliedCoupon | Discount: $discountAmount | Total: $totalPrice\n";
+                        file_put_contents('../coupon_log.txt', $couponLog, FILE_APPEND);
+                    }
+                    
+                    // ====================
+                    // EMAIL ÉRTESÍTÉS (opcionális)
+                    // ====================
+                    $emailSubject = "Your PC Configuration Order #$orderId";
+                    $emailBody = "Dear $name,\n\n";
+                    $emailBody .= "Thank you for ordering your custom PC configuration!\n\n";
+                    $emailBody .= "Order ID: #$orderId\n";
+                    $emailBody .= "Total: $$totalPrice\n";
+                    $emailBody .= "Status: PC Configuration Ordered\n\n";
+                    $emailBody .= "We will contact you shortly about the assembly process.\n\n";
+                    $emailBody .= "Best regards,\nAqua Mini Shop Team";
+                    
+                    // @mail($email, $emailSubject, $emailBody); --> nekem
+                    
+                    $success = true;
+                } else {
+                    throw new Exception("Error saving order: " . $stmt->error);
+                }
+
+                $stmt->close();
+                
+            } catch (Exception $e) {
+                $error = "Error processing your order. Please try again or contact support.";
+                error_log("PC Config Checkout Error: " . $e->getMessage());
+            }
+        }
+    }
+}
+
+// ====================
+// HTML LELÉPÉS
+// ====================
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqua Mini Shop - PC Configuration Checkout</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="../letoles.jpg" type="image/png">
+    <style>
+        :root {
+            --primary: #00796b;
+            --primary-dark: #004d40;
+            --primary-light: #00bcd4;
+            --success: #4caf50;
+            --danger: #f44336;
+            --warning: #ff9800;
+            --gray: #6c7a89;
+            --light-gray: #f5f5f5;
+            --white: #ffffff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+            color: #004d40;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+        }
+        
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 600;
+            padding: 10px 20px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background: var(--white);
+        }
+        
+        .back-btn:hover {
+            background: var(--primary);
+            color: var(--white);
+            transform: translateX(-5px);
+        }
+        
+        .pc-badge {
+            background: var(--primary);
+            color: var(--white);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        @media (max-width: 992px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .summary-box {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 77, 64, 0.1);
+            border: 2px solid var(--primary-light);
+        }
+        
+        .summary-title {
+            color: var(--primary-dark);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-light);
+            font-size: 1.4em;
+        }
+        
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #e0f7fa;
+        }
+        
+        .config-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-info h4 {
+            color: var(--primary-dark);
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+        
+        .item-info .category {
+            color: var(--gray);
+            font-size: 0.9em;
+        }
+        
+        .item-price {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.1em;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px dashed #e0f7fa;
+        }
+        
+        .summary-row.total {
+            border-top: 2px solid var(--primary);
+            border-bottom: none;
+            margin-top: 15px;
+            padding-top: 20px;
+            font-size: 1.2em;
+        }
+        
+        .total-amount {
+            font-weight: 800;
+            color: var(--primary-dark);
+            font-size: 1.3em;
+        }
+        
+        .checkout-box {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 77, 64, 0.1);
+            border: 2px solid var(--primary-light);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #b2ebf2;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .coupon-section {
+            background: #f8fdff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #e0f7fa;
+        }
+        
+        .coupon-input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .coupon-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #b2ebf2;
+            border-radius: 8px;
+        }
+        
+        .coupon-btn {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+        
+        .coupon-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        .terms-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 25px 0;
+        }
+        
+        .terms-check input {
+            margin-top: 5px;
+        }
+        
+        .terms-label {
+            font-size: 0.95em;
+            color: var(--gray);
+        }
+        
+        .terms-label a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .terms-label a:hover {
+            text-decoration: underline;
+        }
+        
+        .pay-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .pay-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 121, 107, 0.3);
+        }
+        
+        .pay-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .security-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: #f8fdff;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: var(--primary-dark);
+            border: 1px solid #e0f7fa;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        
+        .alert-danger {
+            background: #ffebee;
+            color: var(--danger);
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert-warning {
+            background: #fff3e0;
+            color: var(--warning);
+            border: 1px solid #ffe0b2;
+        }
+        
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-box {
+            text-align: center;
+            padding: 40px;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 77, 64, 0.2);
+            max-width: 600px;
+            margin: 50px auto;
+            border: 3px solid var(--success);
+        }
+        
+        .success-icon {
+            font-size: 4em;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+        
+        .order-id {
+            background: #f8fdff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 15px 0;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--gray);
+            font-size: 0.9em;
+            border-top: 1px solid #e0f7fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- SIKERES RENDELÉS MEGJELENÍTÉSE -->
+        <?php if ($success): ?>
+            <div class="success-box">
+                <div class="success-icon">✅</div>
+                <h1>PC Configuration Ordered Successfully!</h1>
+                <p>Your custom PC build has been saved and will be processed shortly.</p>
+                
+                <div class="order-id">
+                    Order ID: #<?= $orderId ?>
+                </div>
+                
+                <p>We will contact you about the assembly and shipping details within 24 hours.</p>
+                <p><strong>Total Paid:</strong> $<?= number_format($totalPrice, 2) ?></p>
+                
+                <div class="action-buttons">
+                    <a href="../products.php" class="btn btn-primary">Continue Shopping</a>
+                    <a href="index.php" class="btn btn-outline">Build Another PC</a>
+                </div>
+                
+                <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e0f7fa;">
+                    <p><small>Need help? Contact us: <strong>kapcsandi.tomi@gmail.com</strong></small></p>
+                </div>
+            </div>
+        <?php else: ?>
+            <!-- VISSZA GOMB -->
+            <a href="index.php" class="back-btn">
+                ← Back to Configurator
+            </a>
+
+            <!-- FEJLÉC -->
+            <div class="header">
+                <h1 style="color: var(--primary-dark);">
+                    💳 PC Configuration Checkout
+                    <span class="pc-badge">Custom Build</span>
+                </h1>
+                <p style="color: var(--gray); margin-top: 10px;">
+                    Complete your purchase for your custom PC configuration
+                </p>
+            </div>
+
+            <!-- HIBA ÜZENET -->
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger">
+                    <?= $error ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- FŐ TARTALOM -->
+            <div class="main-grid">
+                <!-- BAL OLDAL: ÖSSZEGZÉS -->
+                <div class="summary-box">
+                    <h2 class="summary-title">🛒 Your PC Build</h2>
+                    
+                    <!-- TERMÉK LISTA -->
+                    <?php foreach ($order_list as $item): ?>
+                        <div class="config-item">
+                            <div class="item-info">
+                                <h4><?= $item['name'] ?></h4>
+                                <span class="category"><?= $item['category'] ?></span>
+                            </div>
+                            <div class="item-price">
+                                $<?= number_format($item['price'], 2) ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <!-- ÖSSZEGZÉS -->
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0f7fa;">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span>$<?= number_format($subTotal, 2) ?></span>
+                        </div>
+                        
+                        <div class="summary-row">
+                            <span>Shipping</span>
+                            <span id="shippingDisplay">
+                                <?php if ($shippingCost == 0): ?>
+                                    <span style="color: var(--success);">FREE</span>
+                                <?php else: ?>
+                                    $<?= number_format($shippingCost, 2) ?>
+                                <?php endif; ?>
+                            </span>
+                        </div>
+                        
+                        <div class="summary-row">
+                            <span>Discount</span>
+                            <span id="discountDisplay" style="color: var(--success);">
+                                -$<?= number_format($discountAmount, 2) ?>
+                            </span>
+                        </div>
+                        
+                        <div class="summary-row total">
+                            <span><strong>Total</strong></span>
+                            <span class="total-amount" id="totalDisplay">
+                                $<?= number_format($subTotal - $discountAmount + $shippingCost, 2) ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- KUPON SZEKCIÓ -->
+                    <div class="coupon-section">
+                        <h4 style="color: var(--primary-dark); margin-bottom: 10px;">🎁 Have a coupon?</h4>
+                        <div class="coupon-input-group">
+                            <input type="text" 
+                                   class="coupon-input" 
+                                   id="couponInput" 
+                                   placeholder="Enter coupon code (e.g., SUMMER10)">
+                            <button type="button" class="coupon-btn" id="applyCouponBtn">Apply</button>
+                        </div>
+                        <p style="margin-top: 10px; font-size: 0.85em; color: var(--gray);">
+                            Available: SUMMER10 (10% off), FREESHIP (free shipping), PCBUILD5 (5% off PC builds)
+                        </p>
+                    </div>
+
+                    <!-- BIZTONSÁGI JELZŐK -->
+                    <div class="security-badges">
+                        <div class="badge">🔒 256-bit SSL</div>
+                        <div class="badge">✅ 30-Day Return</div>
+                        <div class="badge">🛡️ Fraud Protection</div>
+                    </div>
+                </div>
+
+                <!-- JOBB OLDAL: ŰRLAP -->
+                <div class="checkout-box">
+                    <h2 class="summary-title">📋 Billing Details</h2>
+                    
+                    <form method="POST" id="checkoutForm">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                        <input type="hidden" name="coupon" id="couponField" value="">
+                        
+                        <!-- NÉV -->
+                        <div class="form-group">
+                            <label class="form-label" for="fullname">Full Name *</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="fullname" 
+                                   name="fullname" 
+                                   required
+                                   value="<?= htmlspecialchars($_SESSION['name'] ?? '') ?>">
+                        </div>
+                        
+                        <!-- EMAIL -->
+                        <div class="form-group">
+                            <label class="form-label" for="email">Email Address *</label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="email" 
+                                   name="email" 
+                                   required
+                                   value="<?= htmlspecialchars($_SESSION['email'] ?? '') ?>">
+                        </div>
+                        
+                        <!-- CÍM -->
+                        <div class="form-group">
+                            <label class="form-label" for="address">Shipping Address *</label>
+                            <textarea class="form-control" 
+                                      id="address" 
+                                      name="address" 
+                                      rows="3" 
+                                      required
+                                      placeholder="Street, City, Postal Code, Country"></textarea>
+                        </div>
+                        
+                        <!-- FIZETÉSI ADATOK -->
+                        <h3 style="color: var(--primary-dark); margin: 25px 0 15px 0; padding-top: 20px; border-top: 2px solid #e0f7fa;">
+                            💳 Payment Details
+                        </h3>
+                        
+                        <!-- KÁRTYATÍPUS -->
+                        <div class="form-group">
+                            <label class="form-label" for="card_type">Card Type *</label>
+                            <select class="form-control" id="card_type" name="card_type" required>
+                                <option value="">Select card type</option>
+                                <option value="Visa">Visa</option>
+                                <option value="MasterCard">MasterCard</option>
+                                <option value="American Express">American Express</option>
+                                <option value="Revolut">Revolut</option>
+                            </select>
+                        </div>
+                        
+                        <!-- KÁRTYASZÁM -->
+                        <div class="form-group">
+                            <label class="form-label" for="card_number">Card Number *</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="card_number" 
+                                   name="card_number" 
+                                   maxlength="12"
+                                   placeholder="12 digits"
+                                   required>
+                        </div>
+                        
+                        <!-- LEJÁRAT ÉS CVV -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="expiry">Expiry (MM/YY) *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="expiry" 
+                                       name="expiry" 
+                                       maxlength="5"
+                                       placeholder="MM/YY"
+                                       required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="cvv">CVV *</label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="cvv" 
+                                       name="cvv" 
+                                       maxlength="3"
+                                       placeholder="123"
+                                       required>
+                            </div>
+                        </div>
+                        
+                        <!-- FELTÉTELEK -->
+                        <div class="terms-check">
+                            <input type="checkbox" id="terms" name="terms" required>
+                            <label class="terms-label" for="terms">
+                                I agree to the <a href="#" target="_blank">Terms & Conditions</a> 
+                                and <a href="#" target="_blank">Privacy Policy</a>. *
+                            </label>
+                        </div>
+                        
+                        <!-- FIZETÉS GOMB -->
+                        <button type="submit" class="pay-btn" id="payBtn">
+                            <span>Pay $<?= number_format($subTotal - $discountAmount + $shippingCost, 2) ?></span>
+                            <span>→</span>
+                        </button>
+                        
+                        <!-- KIS SZÖVEG -->
+                        <p style="text-align: center; margin-top: 15px; font-size: 0.9em; color: var(--gray);">
+                            Your PC components will be assembled and tested before shipping.
+                        </p>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- LÁBLÉC -->
+            <div class="footer">
+                <p>© <?= date('Y') ?> Aqua Mini Shop. All rights reserved.</p>
+                <p>Need assistance? Email: <strong>kapcsandi.tomi@gmail.com</strong></p>
+            </div>
+        <?php endif; ?>
+        
+        <!-- BETÖLTŐ OVERLAY -->
+        <div class="processing-overlay" id="processingOverlay">
+            <div class="spinner"></div>
+            <h3 style="color: var(--primary-dark); margin-bottom: 10px;">Processing Payment</h3>
+            <p style="color: var(--gray);">Please wait while we process your order...</p>
+        </div>
+    </div>
+
+    <script>
+        // VÁLTOZÓK
+        let subtotal = <?= json_encode($subTotal) ?>;
+        let shipping = <?= json_encode($shippingCost) ?>;
+        let discount = <?= json_encode($discountAmount) ?>;
+        
+        // KUPONOK
+        const validCoupons = {
+            'SUMMER10': { type: 'percent', value: 0.10 },
+            'FREESHIP': { type: 'shipping', value: 0 },
+            'PCBUILD5': { type: 'percent', value: 0.05 }
+        };
+        
+        // ELEMEK
+        const couponInput = document.getElementById('couponInput');
+        const applyCouponBtn = document.getElementById('applyCouponBtn');
+        const couponField = document.getElementById('couponField');
+        const shippingDisplay = document.getElementById('shippingDisplay');
+        const discountDisplay = document.getElementById('discountDisplay');
+        const totalDisplay = document.getElementById('totalDisplay');
+        const payBtn = document.getElementById('payBtn');
+        const form = document.getElementById('checkoutForm');
+        const processingOverlay = document.getElementById('processingOverlay');
+        
+        // ÖSSZEG FRISSÍTÉSE
+        function updateTotals() {
+            const total = subtotal - discount + shipping;
+            
+            // Shipping megjelenítés
+            if (shipping === 0) {
+                shippingDisplay.innerHTML = '<span style="color: #4caf50;">FREE</span>';
+            } else {
+                shippingDisplay.textContent = '$' + shipping.toFixed(2);
+            }
+            
+            // Discount megjelenítés
+            discountDisplay.textContent = '-$' + discount.toFixed(2);
+            discountDisplay.style.color = discount > 0 ? '#4caf50' : '#6c7a89';
+            
+            // Total megjelenítés
+            totalDisplay.textContent = '$' + total.toFixed(2);
+            
+            // Pay gomb szövegének frissítése
+            if (payBtn) {
+                payBtn.innerHTML = `<span>Pay $${total.toFixed(2)}</span><span>→</span>`;
+            }
+        }
+        
+        // KUPON ALKALMAZÁSA
+        if (applyCouponBtn && couponInput) {
+            applyCouponBtn.addEventListener('click', function() {
+                const code = couponInput.value.trim().toUpperCase();
+                
+                if (!code) {
+                    alert('Please enter a coupon code');
+                    return;
+                }
+                
+                if (!validCoupons[code]) {
+                    alert('Invalid coupon code. Available codes: SUMMER10, FREESHIP, PCBUILD5');
+                    return;
+                }
+                
+                // Kupon mentése hidden field-be
+                couponField.value = code;
+                
+                // Kupon alkalmazása
+                const coupon = validCoupons[code];
+                
+                if (coupon.type === 'percent') {
+                    discount = parseFloat((subtotal * coupon.value).toFixed(2));
+                    shipping = subtotal >= 50 ? 0 : 4.99;
+                } else if (coupon.type === 'shipping') {
+                    discount = 0;
+                    shipping = 0;
+                }
+                
+                // Összegek frissítése
+                updateTotals();
+                
+                // Sikeres üzenet
+                alert(`Coupon "${code}" applied successfully!`);
+            });
+        }
+        
+        // FORM VALIDÁCIÓ ÉS BEKÜLDÉS
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validáció
+                const fullname = document.getElementById('fullname').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const address = document.getElementById('address').value.trim();
+                const cardType = document.getElementById('card_type').value;
+                const cardNumber = document.getElementById('card_number').value.trim();
+                const expiry = document.getElementById('expiry').value.trim();
+                const cvv = document.getElementById('cvv').value.trim();
+                const terms = document.getElementById('terms').checked;
+                
+                let errors = [];
+                
+                if (!fullname) errors.push('Full name is required');
+                if (!email) errors.push('Email is required');
+                if (!address) errors.push('Shipping address is required');
+                if (!cardType) errors.push('Card type is required');
+                if (!/^\d{12}$/.test(cardNumber)) errors.push('Card number must be 12 digits');
+                if (!/^\d{3}$/.test(cvv)) errors.push('CVV must be 3 digits');
+                if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) errors.push('Invalid expiry date (MM/YY)');
+                if (!terms) errors.push('You must accept the terms and conditions');
+                
+                if (errors.length > 0) {
+                    alert('Please fix the following errors:\n\n' + errors.join('\n'));
+                    return false;
+                }
+                
+                // Ha minden jó, indítjuk a folyamatot
+                processingOverlay.style.display = 'flex';
+                payBtn.disabled = true;
+                
+                // Kis késleltetés a UX miatt
+                setTimeout(() => {
+                    form.submit();
+                }, 1500);
+                
+                return false;
+            });
+        }
+        
+        // INPUT FORMATTEREK
+        const cardNumberInput = document.getElementById('card_number');
+        if (cardNumberInput) {
+            cardNumberInput.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 12);
+            });
+        }
+        
+        const expiryInput = document.getElementById('expiry');
+        if (expiryInput) {
+            expiryInput.addEventListener('input', function() {
+                let value = this.value.replace(/\D/g, '').slice(0, 4);
+                if (value.length >= 3) {
+                    this.value = value.slice(0, 2) + '/' + value.slice(2);
+                } else {
+                    this.value = value;
+                }
+            });
+        }
+        
+        const cvvInput = document.getElementById('cvv');
+        if (cvvInput) {
+            cvvInput.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 3);
+            });
+        }
+        
+        // INICIALIZÁLÁS
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTotals();
+        });
+    </script>
+</body>
+</html>
