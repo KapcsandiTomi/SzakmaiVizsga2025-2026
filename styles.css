@@ -1,0 +1,317 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, 
+        #07b9d4 0%, 
+        #1a9fc8 25%, 
+        #2d85bc 50%, 
+        #39a0a9 75%, 
+        #0dc59d 100%
+    );
+    background-size: 400% 400%;
+    animation: gradientFlow 15s ease infinite;
+    padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Water bubbles animation */
+.water-bubbles {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    animation: float 15s infinite linear;
+}
+
+.bubble-1 { width: 80px; height: 80px; top: 10%; left: 10%; animation-delay: 0s; }
+.bubble-2 { width: 120px; height: 120px; top: 60%; left: 80%; animation-delay: 3s; }
+.bubble-3 { width: 60px; height: 60px; top: 80%; left: 20%; animation-delay: 6s; }
+.bubble-4 { width: 100px; height: 100px; top: 30%; left: 70%; animation-delay: 9s; }
+.bubble-5 { width: 70px; height: 70px; top: 50%; left: 40%; animation-delay: 12s; }
+
+@keyframes float {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-1000px) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+.aqua-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, 
+        rgba(7, 185, 212, 0.1) 0%,
+        rgba(34, 174, 106, 0.1) 50%,
+        rgba(77, 108, 182, 0.1) 100%
+    );
+    z-index: -2;
+}
+
+.form-content h2 {
+    color: #2c3e50;
+    font-size: 28px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-content h2 i {
+    color: #07b9d4;
+}
+
+.form-subtitle {
+    color: #7f8c8d;
+    margin-bottom: 30px;
+    font-size: 16px;
+}
+
+.input-group {
+    margin-bottom: 25px;
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-icon i {
+    position: absolute;
+    left: 20px;
+    color: #07b9d4;
+    font-size: 18px;
+    z-index: 1;
+}
+
+.input-with-icon input {
+    width: 100%;
+    padding: 16px 20px 16px 55px;
+    border: 2px solid #e0f7fa;
+    border-radius: 12px;
+    font-size: 16px;
+    background: white;
+    transition: all 0.3s ease;
+    color: #2c3e50;
+    box-shadow: 0 3px 10px rgba(0, 188, 212, 0.05);
+}
+
+.input-with-icon input:focus {
+    outline: none;
+    border-color: #07b9d4;
+    box-shadow: 0 5px 20px rgba(0, 188, 212, 0.15);
+    transform: translateY(-2px);
+}
+
+.password-requirements {
+    background: #f8fdff;
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 15px;
+    border: 1px solid #e0f7fa;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #5d6d7e;
+    transition: all 0.3s ease;
+}
+
+.requirement:last-child {
+    margin-bottom: 0;
+}
+
+.requirement .indicator {
+    margin-right: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.requirement.valid {
+    color: #27ae60;
+    font-weight: 500;
+}
+
+.requirement.valid .indicator {
+    color: #2ecc71;
+}
+
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: #5d6d7e;
+    font-size: 14px;
+    user-select: none;
+}
+
+.checkbox input {
+    display: none;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e0f7fa;
+    border-radius: 4px;
+    margin-right: 10px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.checkbox input:checked ~ .checkmark {
+    background: #07b9d4;
+    border-color: #07b9d4;
+}
+
+.checkbox input:checked ~ .checkmark::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.terms-link {
+    color: #07b9d4;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.terms-link:hover {
+    text-decoration: underline;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #07b9d4, #22ae6a);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    box-shadow: 0 4px 15px rgba(7, 185, 212, 0.3);
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(7, 185, 212, 0.4);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+.submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Form info */
+.form-info {
+    background: rgba(7, 185, 212, 0.1);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 25px;
+    color: #07b9d4;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-info i {
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .form-content h2 {
+        font-size: 24px;
+    }
+    
+    .form-subtitle {
+        font-size: 14px;
+    }
+    
+    .submit-btn {
+        padding: 14px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .input-with-icon input {
+        padding: 14px 20px 14px 50px;
+        font-size: 15px;
+    }
+    
+    .input-with-icon i {
+        left: 15px;
+        font-size: 16px;
+    }
+    
+    .password-requirements {
+        padding: 12px;
+    }
+    
+    .requirement {
+        font-size: 13px;
+    }
+}
