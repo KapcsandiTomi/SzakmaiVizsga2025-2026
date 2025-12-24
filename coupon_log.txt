@@ -1,0 +1,17 @@
+2025-12-12 15:12:06 - Order saved. User: kapcsandi.tomi@gmail.com, Coupon: SUMMER10, Discount: 25.8, Shipping: 0
+2025-12-12 15:20:30 - Order saved. User: admin@gmail.com, Coupon: SUMMER10, Discount: 3.2, Shipping: 4.99
+2025-12-12 15:33:51 - Order saved. User: admin@gmail.com, Coupon: SUMMER10, Discount: 19.1, Shipping: 0
+2025-12-12 19:32:13 - Order saved. User: kapcsandi.tomi@gmail.com, Coupon: SUMMER10, Discount: 12, Shipping: 0
+2025-12-13 13:51:06 - Order saved. User: kapcsandi.tomi@gmail.com, Coupon: SUMMER10, Discount: 20.9, Shipping: 0
+2025-12-14 17:24:58 - Order saved. User: admin@gmail.com, Coupon: SUMMER10, Discount: 15.3, Shipping: 0
+2025-12-14 20:40:11 | PC Config #3 | User: admin@gmail.com | Coupon: SUMMER10 | Discount: 152.9 | Total: 1376.1
+2025-12-15 17:43:29 - Order saved. User: admin@gmail.com, Coupon: SUMMER10, Discount: 12, Shipping: 0
+2025-12-15 18:58:17 - Order #10 - User: kapcsi05@gmail.com, Coupon: SUMMER10, Discount: 15, Shipping: 0
+2025-12-17 08:49:26 - Order #1 - User: jozsef.fuleki@petofi-aszod.hu, Coupon: SUMMER10, Discount: 12, Shipping: 0
+2025-12-17 08:52:11 | PC Config #2 | User: jozsef.fuleki@petofi-aszod.hu | Coupon: SUMMER10 | Discount: 85.2 | Total: 766.8
+2025-12-18 14:58:34 - Order #12 - User: admin@gmail.com, Coupon: SUMMER10, Discount: 10, Shipping: 0
+2025-12-19 14:05:18 - Order #13 - User: admin@gmail.com, Coupon: SUMMER10, Discount: 70, Shipping: 0
+2025-12-20 14:35:54 - Order #17 - User: kapcsitomo2022@gmail.com, Coupon: SUMMER10, Discount: 9, Shipping: 0
+2025-12-20 16:40:27 - Order #19 - User: kapcsandi.tomi@gmail.com, Coupon: SUMMER10, Discount: 3.4, Shipping: 4.99
+2025-12-23 20:00:26 - Order #20 - User: kapcsandi.tomi@gmail.com, Coupon: SUMMER10, Discount: 15.9, Shipping: 0
+2025-12-23 21:42:19 - Order #21 - User: tomika@gmail.com, Coupon: SUMMER10, Discount: 9, Shipping: 0
