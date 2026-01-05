@@ -103,18 +103,12 @@ $statusIcons = [
             color: #1e3a8a;
         }
         
-        /* ==================== */
-        /* FŐ TARTALOM KONTAINER */
-        /* ==================== */
         .main-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 30px 20px;
         }
-        
-        /* ==================== */
-        /* HERO FEJLÉC */
-        /* ==================== */
+    
         .hero-header {
             text-align: center;
             margin-bottom: 40px;
@@ -140,9 +134,7 @@ $statusIcons = [
             margin-top: 15px;
         }
         
-        /* ==================== */
-        /* KÉT OSZLOPOS LAYOUT */
-        /* ==================== */
+      
         .dashboard-layout {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -150,9 +142,7 @@ $statusIcons = [
             margin-bottom: 40px;
         }
         
-        /* ==================== */
-        /* DASHBOARD KÁRTYÁK - KISEBB ÉS SORBAN */
-        /* ==================== */
+
         .dashboard-cards {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -228,9 +218,7 @@ $statusIcons = [
             line-height: 1.4;
         }
         
-        /* ==================== */
-        /* KOSÁR SZEKCIÓ - KISEBB */
-        /* ==================== */
+ 
         .cart-section {
             background: white;
             border-radius: 25px;
@@ -270,9 +258,6 @@ $statusIcons = [
             margin: 0;
         }
         
-        /* ==================== */
-        /* KOSÁR ITEMS - KOMPAKTABB */
-        /* ==================== */
         .cart-items-compact {
             max-height: 400px;
             overflow-y: auto;
@@ -323,9 +308,6 @@ $statusIcons = [
             color: var(--aqua-primary);
         }
         
-        /* ==================== */
-        /* KOSÁR ÖSSZESÍTŐ */
-        /* ==================== */
         .cart-total-compact {
             background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
             border-radius: 20px;
@@ -398,9 +380,7 @@ $statusIcons = [
             box-shadow: 0 5px 15px rgba(0, 180, 216, 0.3);
         }
         
-        /* ==================== */
-        /* RENDELÉS HISTORY - VÍZSZINTES KÁRTYÁK */
-        /* ==================== */
+
         .orders-main-section {
             background: white;
             border-radius: 25px;
@@ -457,9 +437,6 @@ $statusIcons = [
             box-shadow: 0 3px 10px rgba(0, 180, 216, 0.2);
         }
         
-        /* ==================== */
-        /* VÍZSZINTES RENDELÉS KÁRTYÁK */
-        /* ==================== */
         .orders-horizontal-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(550px, 1fr));
@@ -532,9 +509,7 @@ $statusIcons = [
             color: white;
         }
         
-        /* ==================== */
-        /* RENDELÉS DETAILEK - KOMPAKTABB */
-        /* ==================== */
+        
         .order-details-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -572,9 +547,7 @@ $statusIcons = [
             color: var(--aqua-primary);
         }
         
-        /* ==================== */
-        /* PROGRESS BAR ÉS FOOTER */
-        /* ==================== */
+        
         .order-progress-horizontal {
             margin: 20px 0;
         }
@@ -642,9 +615,7 @@ $statusIcons = [
             color: var(--aqua-primary);
         }
         
-        /* ==================== */
-        /* ÜRES ÁLLAPOTOK */
-        /* ==================== */
+       
         .empty-state-compact {
             text-align: center;
             padding: 50px 30px;
@@ -696,9 +667,7 @@ $statusIcons = [
             color: white;
         }
         
-        /* ==================== */
-        /* ANIMÁCIÓK */
-        /* ==================== */
+        
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
@@ -708,9 +677,7 @@ $statusIcons = [
             animation: float 3s ease-in-out infinite;
         }
         
-        /* ==================== */
-        /* RESPONZÍV DESIGN */
-        /* ==================== */
+       
         @media (max-width: 1200px) {
             .dashboard-layout {
                 grid-template-columns: 1fr;
@@ -769,9 +736,7 @@ $statusIcons = [
             }
         }
         
-        /* ==================== */
-        /* EGYÉB STÍLUSOK */
-        /* ==================== */
+      
         .cart-items-compact::-webkit-scrollbar {
             width: 6px;
         }
@@ -794,7 +759,7 @@ $statusIcons = [
 <body>
 
 <!-- ==================== -->
-<!-- NAVBAR - VÁLTOZATLAN -->
+<!-- NAVBAR
 <!-- ==================== -->
 <div class="container-fluid bg-light p-0">
     <div class="row gx-0 d-none d-lg-flex">
@@ -863,24 +828,23 @@ $statusIcons = [
   </nav>
 
 <!-- ==================== -->
-<!-- FŐ TARTALOM -->
+<!-- FŐ -->
 <!-- ==================== -->
 <div class="main-container">
     
-    <!-- HERO SZEKCIÓ -->
+    <!-- HERO -->
     <div class="hero-header">
         <h1 class="aqua-title">My Orders</h1>
         <p class="text-muted fs-5">Manage your purchases and track orders in real-time</p>
         <div class="wave-decoration"></div>
     </div>
     
-    <!-- KÉT OSZLOPOS LAYOUT -->
+    <!-- KÉT OSZLOP -->
     <div class="dashboard-layout">
         
-        <!-- BAL OLDALI SZEKCIÓ (DASHBOARD ÉS RENDELÉSEK) -->
+        <!-- BAL OLDAL -->
         <div class="orders-main-section">
             
-            <!-- DASHBOARD STATISZTIKA KÁRTYÁK -->
             <div class="dashboard-cards">
                 <div class="dashboard-card">
                     <div class="card-icon">
@@ -934,7 +898,7 @@ $statusIcons = [
                     </a>
                 </div>
             <?php else: ?>
-                <!-- VÍZSZINTES RENDELÉS KÁRTYÁK -->
+                <!-- RENDELÉS KÁRTYÁK -->
                 <div class="orders-horizontal-grid">
                     <?php foreach ($db_orders as $index => $order): 
                         $status = $order['status'] ?? 'Not Processed';
@@ -944,7 +908,7 @@ $statusIcons = [
                         $currentDate = time();
                         $daysDiff = floor(($currentDate - $orderDate) / (60 * 60 * 24));
                         
-                        // PROGRESS SZÁMÍTÁS ÁLLAPOT ALAPJÁN
+                        //PROGRESS ALALPOT HALADASA
                         $progress = 0;
                         switch($status) {
                             case 'Not Processed': $progress = 20; break;
@@ -966,7 +930,7 @@ $statusIcons = [
                                 </div>
                             </div>
                             
-                            <!-- RENDELÉS DETAILEK GRID -->
+                            <!-- RENDELÉS  -->
                             <div class="order-details-grid">
                                 <div class="detail-item-horizontal">
                                     <span class="detail-label-horizontal">Customer</span>
@@ -986,7 +950,7 @@ $statusIcons = [
                                 </div>
                             </div>
                             
-                            <!-- PROGRESS BAR -->
+                            <!-- PROGRESS RESZ -->
                             <div class="order-progress-horizontal">
                                 <div class="progress-label-horizontal">
                                     <span>Order Progress</span>
@@ -1014,7 +978,7 @@ $statusIcons = [
             <?php endif; ?>
         </div>
         
-        <!-- JOBB OLDALI SZEKCIÓ (KOSÁR) -->
+        <!-- JOBB OLDALI SZEKCIÓ -->
         <div class="cart-section">
             <div class="section-title-aqua">
                 <i class="fas fa-shopping-basket"></i>
@@ -1063,7 +1027,7 @@ $statusIcons = [
                         <div class="total-amount-compact">$<?= number_format($totalPrice, 2) ?></div>
                     </div>
                     
-                    <!-- MŰVELETI GOMBOK -->
+                    <!-- GOMBOK -->
                     <div class="cart-actions-compact">
                         <form method="post" style="flex: 1;">
                             <button type="submit" name="clear_order" class="btn-compact btn-danger-compact">
@@ -1081,7 +1045,7 @@ $statusIcons = [
 </div>
 
 <!-- ==================== -->
-<!-- FOOTER - VÁLTOZATLAN -->
+<!-- FOOTER --->
 <!-- ==================== -->
 <br>
 <footer>
@@ -1120,7 +1084,7 @@ $statusIcons = [
 <!-- ==================== -->
 <script>
 // ====================
-// KÉPHIBA KEZELÉS
+// KÉPHIBA KEZELÉSE
 // ====================
 document.querySelectorAll('img').forEach(img => {
     img.addEventListener('error', function() {
@@ -1131,7 +1095,7 @@ document.querySelectorAll('img').forEach(img => {
 });
 
 // ====================
-// OLDAL BETÖLTÉSEKOR FUTÓ KÓD
+// OLDAL BETÖLTÉSE
 // ====================
 document.addEventListener('DOMContentLoaded', function() {
     // PROGRESS BAR ANIMÁCIÓ
@@ -1144,7 +1108,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
     
-    // KÁRTYA HOVER EFFEKTEK
+    // KÁRTYA EFFEKTEK
     const cards = document.querySelectorAll('.dashboard-card, .cart-item-compact, .order-card-horizontal');
     cards.forEach(card => {
         card.addEventListener('mouseenter', function() {
@@ -1156,7 +1120,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // TRACK GOMB KLIKK EFFEKT
+    //TRACK BUTTON
     const trackButtons = document.querySelectorAll('.track-btn-horizontal');
     trackButtons.forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -1167,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // KÁRTYA BEJÖVŐ ANIMÁCIÓ
+    //KÁRTYA ANIMATION
     const orderCards = document.querySelectorAll('.order-card-horizontal');
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -1213,9 +1177,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ====================
-// SMOOTH SCROLL ANCHOR LINKKEKHEZ
-// ====================
+
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
         e.preventDefault();
@@ -1233,9 +1195,6 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 </script>
 
-<!-- ==================== -->
-<!-- KÜLSŐ JAVASCRIPT FÁJLOK -->
-<!-- ==================== -->
 <script src="javas.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://kit.fontawesome.com/yourkitid.js" crossorigin="anonymous"></script>
