@@ -46,7 +46,8 @@ $statusColors = [
     "Processed" => "#ffa500", 
     "Handed to Courier" => "#1e90ff",
     "On the Way" => "#ffff66",
-    "Delivered" => "#32cd32"
+    "Delivered" => "#32cd32",
+    "PC Configuration Ordered" => "#9370db"
 ];
 
 // ====================
@@ -57,8 +58,8 @@ $statusDescriptions = [
     "Processed" => "Your order has been processed and is being prepared for shipment.",
     "Handed to Courier" => "Your order has been handed over to the courier service.",
     "On the Way" => "Your order is on the way to your address.",
-    "Delivered" => "Your order has been delivered successfully."
-];
+    "Delivered" => "Your order has been delivered successfully.",
+    "PC Configuration Ordered" => "Your PC configuration has been ordered and is being assembled." 
 
 // ====================
 // ÁLLAPOT ICONOK
@@ -68,11 +69,12 @@ $statusIcons = [
     "Processed" => "fas fa-cogs",
     "Handed to Courier" => "fas fa-handshake",
     "On the Way" => "fas fa-truck",
-    "Delivered" => "fas fa-check-circle"
+    "Delivered" => "fas fa-check-circle",
+    "PC Configuration Ordered" => "fas fa-desktop" // Új ikon
 ];
 
 // ====================
-// HELPER FUNCTIONS
+// HELPER FUNKCIÓK
 // ====================
 function parseOrderData($orderDataJson, $totalPrice) {
     if (empty($orderDataJson) || trim($orderDataJson) === '') {
@@ -702,6 +704,10 @@ function displayProduct($item) {
             margin-top: 5px;
         }
         
+        .dynamic-step {
+            min-width: 80px;
+        }
+        
         @media (max-width: 768px) {
             .track-container {
                 padding: 0 15px;
@@ -781,9 +787,16 @@ function displayProduct($item) {
         $discount = $orderInfo['discount'];
         $shipping = $orderInfo['shipping'];
         $currentStatus = $order['status'] ?? 'Not Processed';
-        $statusColor = $statusColors[$currentStatus] ?? '#ffffff';
+        $statusColor = $statusColors[$currentStatus] ?? $statusColors['Not Processed'];
+        $statusIcon = $statusIcons[$currentStatus] ?? $statusIcons['Not Processed'];
+        $statusDescription = $statusDescriptions[$currentStatus] ?? 'Your order status is being updated.';
         
         $statusSteps = ["Not Processed", "Processed", "Handed to Courier", "On the Way", "Delivered"];
+        
+        if (!in_array($currentStatus, $statusSteps)) {
+            $statusSteps[] = $currentStatus;
+        }
+        
         $currentStepIndex = array_search($currentStatus, $statusSteps);
         $progressPercentage = $currentStepIndex !== false ? ($currentStepIndex + 1) / count($statusSteps) * 100 : 20;
         
@@ -811,10 +824,13 @@ function displayProduct($item) {
                     $isActive = ($step === $currentStatus);
                     $isCompleted = ($currentStepIndex !== false && $index <= $currentStepIndex);
                     $stepClass = $isActive ? 'step-active' : ($isCompleted ? 'step-completed' : '');
+                    
+                    $stepIcon = $statusIcons[$step] ?? $statusIcons['Not Processed'];
+                    $stepColor = $statusColors[$step] ?? $statusColors['Not Processed'];
                 ?>
-                <div class="status-step <?php echo $stepClass; ?>">
-                    <div class="step-icon" style="<?php echo $isCompleted ? 'background:' . $statusColors[$step] : ''; ?>">
-                        <i class="<?php echo $statusIcons[$step]; ?>"></i>
+                <div class="status-step <?php echo $stepClass; ?> dynamic-step">
+                    <div class="step-icon" style="<?php echo $isCompleted ? 'background:' . $stepColor : ''; ?>">
+                        <i class="<?php echo $stepIcon; ?>"></i>
                     </div>
                     <div class="step-label"><?php echo $step; ?></div>
                     <?php if ($isActive || $isCompleted): ?>
@@ -833,11 +849,11 @@ function displayProduct($item) {
             <div class="current-status-card">
                 <div class="current-status">
                     <div class="status-icon" style="background: <?php echo $statusColor; ?>;">
-                        <i class="<?php echo $statusIcons[$currentStatus]; ?>"></i>
+                        <i class="<?php echo $statusIcon; ?>"></i>
                     </div>
                     <div class="status-text">
                         <div class="status-name"><?php echo $currentStatus; ?></div>
-                        <div class="status-description"><?php echo $statusDescriptions[$currentStatus]; ?></div>
+                        <div class="status-description"><?php echo $statusDescription; ?></div>
                     </div>
                 </div>
                 <div class="order-date mt-3">
