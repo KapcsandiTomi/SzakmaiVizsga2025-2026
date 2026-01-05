@@ -915,7 +915,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </div>
                 
                 <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e0f7fa;">
-                    <p><small>Need help? Contact us: <strong>kapcsitomo2022@gmail.com</strong></small></p>
+                    <p><small>Need help? Contact us: <strong>aquaminishop@gmail.com</strong></small></p>
                 </div>
             </div>
         <?php else: ?>
