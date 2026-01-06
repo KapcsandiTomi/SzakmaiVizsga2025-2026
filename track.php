@@ -60,7 +60,7 @@ $statusDescriptions = [
     "On the Way" => "Your order is on the way to your address.",
     "Delivered" => "Your order has been delivered successfully.",
     "PC Configuration Ordered" => "Your PC configuration has been ordered and is being assembled." 
-
+];
 // ====================
 // ÁLLAPOT ICONOK
 // ====================
@@ -70,7 +70,7 @@ $statusIcons = [
     "Handed to Courier" => "fas fa-handshake",
     "On the Way" => "fas fa-truck",
     "Delivered" => "fas fa-check-circle",
-    "PC Configuration Ordered" => "fas fa-desktop" // Új ikon
+    "PC Configuration Ordered" => "fas fa-desktop" 
 ];
 
 // ====================
