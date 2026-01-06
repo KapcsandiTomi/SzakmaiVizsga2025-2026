@@ -250,7 +250,6 @@ INSERT INTO `4` (name, email, password, profile_pic, is_admin) VALUES
 ('Admin User','admin@gmail.com',
 '$2y$10$e0NRgFZhzF0v4mQYpxV4..mTZP2fPy0bbLp2Q.qH7iZQZ8LEKPm3G',NULL,1),
 
-('11tomy11','kapcsandi.tomi@gmail.com',
-'$2y$10$2QdV1d3n3k8A7f4Z5xSVWOZk2lIx1ScFqE0fG3V8yXID5wL3Uu8XS',NULL,0);
 
 COMMIT;
+
