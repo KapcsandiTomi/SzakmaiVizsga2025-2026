@@ -9,7 +9,7 @@ CREATE DATABASE IF NOT EXISTS users_db
 USE users_db;
 
 -- =========================
--- USERS TABLE
+-- USERS
 -- =========================
 CREATE TABLE IF NOT EXISTS `4` (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `4` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================
--- ORDERS TABLE
+-- ORDERS 
 -- =========================
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS orders (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================
--- PC CONFIGURATOR TABLES
+-- PC CONFIG.
 -- =========================
 CREATE TABLE IF NOT EXISTS pc_categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,7 +94,7 @@ CREATE TABLE `favorites` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================
--- DATA INSERTS
+-- PC CATEG.
 -- =========================
 INSERT INTO pc_categories (name) VALUES
 ('Processor'),
@@ -109,7 +109,7 @@ INSERT INTO pc_categories (name) VALUES
 ('System Cooling');
 
 -- =========================
--- PC PRODUCTS INSERTS (10 per category, prices in EUR)
+-- PC PRODUCTS 
 -- =========================
 
 -- Processzor
@@ -246,10 +246,15 @@ INSERT INTO pc_products (name, price, image, category_id) VALUES
 -- =========================
 -- USERS
 -- =========================
-INSERT INTO `4` (name, email, password, profile_pic, is_admin) VALUES
-('Admin User','admin@gmail.com',
-'$2y$10$e0NRgFZhzF0v4mQYpxV4..mTZP2fPy0bbLp2Q.qH7iZQZ8LEKPm3G',NULL,1),
 
+INSERT INTO `4` (name, email, password, profile_pic, is_admin) VALUES
+(
+  'Admin User',
+  'admin@gmail.com',
+  '$2y$10$e0NRgFZhzF0v4mQYpxV4..mTZP2fPy0bbLp2Q.qH7iZQZ8LEKPm3G',
+  NULL,
+  1
+);
 
 COMMIT;
 
