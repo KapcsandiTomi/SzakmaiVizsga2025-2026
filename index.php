@@ -3,78 +3,71 @@ session_start();
 
 // Adatbázis kapcsolat
 require_once 'config.php';
+require_once 'handler/userhandler.php';
 
-// Felhasználók száma az adatbázisból
+// Felhasználó számlálás
 $userCount = 0;
-$stmt = $conn->prepare("SELECT COUNT(*) as count FROM `4`");
-if ($stmt) {
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($row = $result->fetch_assoc()) {
-        $userCount = $row['count'];
-    }
-    $stmt->close();
+try {
+    $userHandler = new UserHandler($conn);
+    $userCount = $userHandler->getUserCount();
+} catch (Exception $e) {
+    $userCount = 0;
 }
 
-// Hibaakezelés
 $errors = [
     'login' => $_SESSION['login_error'] ?? '',
     'register' => $_SESSION['register_error'] ?? '',
     'forgot' => $_SESSION['forgot_error'] ?? ''
 ];
 
-// Siker megjelenítése
 $success = [
     'register' => $_SESSION['register_success'] ?? '',
     'forgot' => $_SESSION['forgot_success'] ?? ''
 ];
 
-// Jelenlegi űrlap meghatározása
 $activeForm = $_SESSION['active_form'] ?? 'login';
-
-// Hiányzó mezők lekérése
 $missingFields = $_SESSION['missing_fields'] ?? [];
 
-// Session változók tisztítása (de a missing_fields marad!)
-$_SESSION['login_error'] = '';
-$_SESSION['register_error'] = '';
-$_SESSION['forgot_error'] = '';
-$_SESSION['register_success'] = '';
-$_SESSION['forgot_success'] = '';
-$_SESSION['active_form'] = '';
+unset(
+    $_SESSION['login_error'],
+    $_SESSION['register_error'],
+    $_SESSION['forgot_error'],
+    $_SESSION['register_success'],
+    $_SESSION['forgot_success'],
+    $_SESSION['active_form']
+);
 
-// Error megjelenítő függvény
-function showError($error){
-    return !empty($error) ? "<div class='error-message'><i class='fas fa-exclamation-circle'></i> $error</div>" : '';
+function showError($error) {
+    if (!empty($error)) {
+        return "<div class='error-message'><i class='fas fa-exclamation-circle'></i> " . htmlspecialchars($error) . "</div>";
+    }
+    return '';
 }
 
-// Siker megjelenítő függvény
-function showSuccess($msg){
-    return !empty($msg) ? "<div class='success-message'><i class='fas fa-check-circle'></i> $msg</div>" : '';
+function showSuccess($msg) {
+    if (!empty($msg)) {
+        return "<div class='success-message'><i class='fas fa-check-circle'></i> " . htmlspecialchars($msg) . "</div>";
+    }
+    return '';
 }
 
-// Aktív űrlap ellenőrzése
-function isActiveForm($formName, $activeForm){
+function isActiveForm($formName, $activeForm) {
     return $formName === $activeForm ? 'active' : '';
 }
 
-// Aktív fül ellenőrzése
-function isActiveTab($tabName, $activeForm){
+function isActiveTab($tabName, $activeForm) {
     return $tabName === $activeForm ? 'active' : '';
 }
 
-// Hiányzó mező osztály hozzáadása
 function isMissingField($fieldName, $missingFields) {
     return in_array($fieldName, $missingFields) ? 'missing-field' : '';
 }
 
-// Bejelentkezési mezők ellenőrzése
 function isMissingLoginField($fieldType, $missingFields) {
     $fieldName = 'login_' . $fieldType;
     return in_array($fieldName, $missingFields) ? 'missing-field' : '';
 }
 
-// Elfelejtett jelszó mezők ellenőrzése
 function isMissingForgotField($fieldType, $missingFields) {
     $fieldName = 'forgot_' . $fieldType;
     return in_array($fieldName, $missingFields) ? 'missing-field' : '';
@@ -91,6 +84,40 @@ function isMissingForgotField($fieldType, $missingFields) {
     <link rel="icon" href="letoles.jpg" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        .main-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 40px auto;
+            display: flex;
+            min-height: 700px;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            background: white;
+        }
+        
+        .form-side {
+            flex: 1;
+            padding: 0;
+            background: white;
+        }
+        
+        .welcome-side {
+            flex: 1;
+            background: linear-gradient(135deg, 
+                rgba(7, 185, 212, 0.9),
+                rgba(34, 174, 106, 0.9),
+                rgba(77, 108, 182, 0.9)
+            );
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
         .form-tabs {
             display: flex;
             background: rgba(255, 255, 255, 0.1);
@@ -172,15 +199,54 @@ function isMissingForgotField($fieldType, $missingFields) {
             display: block;
         }
         
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .form-content h2 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .input-with-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-with-icon i {
+            position: absolute;
+            left: 15px;
+            color: #07b9d4;
+            font-size: 18px;
+        }
+        
+        .input-with-icon input {
+            width: 100%;
+            padding: 15px 15px 15px 50px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .input-with-icon input:focus {
+            outline: none;
+            border-color: #07b9d4;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(7, 185, 212, 0.1);
         }
         
         .missing-field {
@@ -253,20 +319,117 @@ function isMissingForgotField($fieldType, $missingFields) {
             }
         }
         
-        .welcome-side {
-            background: linear-gradient(135deg, 
-                rgba(7, 185, 212, 0.9),
-                rgba(34, 174, 106, 0.9),
-                rgba(77, 108, 182, 0.9)
-            );
-            padding: 50px 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #07b9d4, #22ae6a);
             color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(7, 185, 212, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .password-requirements {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #07b9d4;
+        }
+        
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        .requirement.valid {
+            color: #27ae60;
+        }
+        
+        .requirement .indicator {
+            font-size: 12px;
+        }
+        
+        .form-options {
+            margin: 20px 0;
+        }
+        
+        .checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #5d6d7e;
+        }
+        
+        .checkbox input {
+            display: none;
+        }
+        
+        .checkmark {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
             position: relative;
-            overflow: hidden;
-            border-radius: 0 24px 24px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox input:checked ~ .checkmark {
+            background: #07b9d4;
+            border-color: #07b9d4;
+        }
+        
+        .checkmark::after {
+            content: '';
+            position: absolute;
+            display: none;
+            left: 6px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        .checkbox input:checked ~ .checkmark::after {
+            display: block;
+        }
+        
+        .terms-link {
+            color: #07b9d4;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .terms-link:hover {
+            text-decoration: underline;
         }
         
         .welcome-side::before {
@@ -293,6 +456,8 @@ function isMissingForgotField($fieldType, $missingFields) {
             font-size: 32px;
             font-weight: 700;
             margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
         }
         
         .logo i {
@@ -309,6 +474,8 @@ function isMissingForgotField($fieldType, $missingFields) {
             font-size: 48px;
             margin-bottom: 20px;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 1;
         }
         
         .tagline {
@@ -316,6 +483,8 @@ function isMissingForgotField($fieldType, $missingFields) {
             opacity: 0.9;
             margin-bottom: 50px;
             line-height: 1.6;
+            position: relative;
+            z-index: 1;
         }
         
         .features {
@@ -323,6 +492,8 @@ function isMissingForgotField($fieldType, $missingFields) {
             flex-direction: column;
             gap: 25px;
             margin-bottom: 50px;
+            position: relative;
+            z-index: 1;
         }
         
         .feature {
@@ -363,6 +534,8 @@ function isMissingForgotField($fieldType, $missingFields) {
             justify-content: space-between;
             padding-top: 30px;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 1;
         }
         
         .stat h3 {
@@ -375,33 +548,95 @@ function isMissingForgotField($fieldType, $missingFields) {
             opacity: 0.8;
         }
         
-
-        .main-container {
+        .aqua-background {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            min-height: 700px;
-            border-radius: 24px;
+            height: 100%;
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            z-index: -1;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            background: white;
         }
         
-        .form-side {
-            flex: 1;
-            padding: 0;
-            border-radius: 24px 0 0 24px;
+        .water-bubbles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
         }
-
+        
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 15s infinite ease-in-out;
+        }
+        
+        .bubble-1 {
+            width: 80px;
+            height: 80px;
+            left: 10%;
+            top: 20%;
+            animation-delay: 0s;
+        }
+        
+        .bubble-2 {
+            width: 120px;
+            height: 120px;
+            right: 15%;
+            top: 40%;
+            animation-delay: 3s;
+        }
+        
+        .bubble-3 {
+            width: 60px;
+            height: 60px;
+            left: 20%;
+            bottom: 30%;
+            animation-delay: 6s;
+        }
+        
+        .bubble-4 {
+            width: 100px;
+            height: 100px;
+            right: 25%;
+            bottom: 20%;
+            animation-delay: 9s;
+        }
+        
+        .bubble-5 {
+            width: 70px;
+            height: 70px;
+            left: 50%;
+            top: 10%;
+            animation-delay: 12s;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-100px) rotate(180deg);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
         @media (max-width: 992px) {
             .main-container {
                 flex-direction: column;
                 max-width: 600px;
-            }
-            
-            .form-side, .welcome-side {
-                border-radius: 24px 24px 0 0;
+                margin: 20px auto;
             }
             
             .welcome-side {
@@ -426,11 +661,14 @@ function isMissingForgotField($fieldType, $missingFields) {
         @media (max-width: 576px) {
             .main-container {
                 border-radius: 15px;
+                margin: 10px;
+                min-height: auto;
             }
             
             .stats {
                 flex-direction: column;
                 gap: 20px;
+                text-align: center;
             }
             
             .welcome-side {
@@ -453,6 +691,20 @@ function isMissingForgotField($fieldType, $missingFields) {
             .form-container {
                 padding: 30px 20px;
             }
+            
+            .logo {
+                font-size: 24px;
+            }
+            
+            .logo i {
+                font-size: 30px;
+            }
+            
+            .feature {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -471,37 +723,38 @@ function isMissingForgotField($fieldType, $missingFields) {
 <div class="main-container">
     <div class="form-side">
         <div class="form-tabs">
-            <button class="tab-btn <?= isActiveTab('login', $activeForm); ?>" data-tab="login">
+            <button class="tab-btn <?php echo isActiveTab('login', $activeForm); ?>" data-tab="login">
                 <i class="fas fa-sign-in-alt"></i>
                 <span>Login</span>
             </button>
-            <button class="tab-btn <?= isActiveTab('register', $activeForm); ?>" data-tab="register">
+            <button class="tab-btn <?php echo isActiveTab('register', $activeForm); ?>" data-tab="register">
                 <i class="fas fa-user-plus"></i>
                 <span>Register</span>
             </button>
-            <button class="tab-btn <?= isActiveTab('forgot', $activeForm); ?>" data-tab="forgot">
+            <button class="tab-btn <?php echo isActiveTab('forgot', $activeForm); ?>" data-tab="forgot">
                 <i class="fas fa-key"></i>
                 <span>Reset Password</span>
             </button>
         </div>
         
-        <!--MAGA A FORM-->
         <div class="form-container">
             <!-- Login Form -->
-            <div id="login-content" class="form-content <?= isActiveForm('login', $activeForm); ?>">
+            <div id="login-content" class="form-content <?php echo isActiveForm('login', $activeForm); ?>">
                 <form action="login-register.php" method="post">
                     <h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2>
                     <p class="form-subtitle">Please sign in to your account</p>
                     
-                    <?= showError($errors['login']); ?>
-                    <?= showSuccess($success['register']); ?>
-                    <?= showSuccess($success['forgot']); ?>
+                    <?php 
+                    echo showError($errors['login']);
+                    echo showSuccess($success['register']);
+                    echo showSuccess($success['forgot']);
+                    ?>
                     
                     <div class="input-group">
                         <div class="input-with-icon">
                             <i class="fas fa-envelope"></i>
                             <input type="email" name="email" 
-                                   class="<?= isMissingLoginField('email', $missingFields); ?>"
+                                   class="<?php echo isMissingLoginField('email', $missingFields); ?>"
                                    placeholder="Email address" required>
                         </div>
                         <div class="field-requirement">Please enter your email address</div>
@@ -511,7 +764,7 @@ function isMissingForgotField($fieldType, $missingFields) {
                         <div class="input-with-icon">
                             <i class="fas fa-lock"></i>
                             <input type="password" name="password" 
-                                   class="<?= isMissingLoginField('password', $missingFields); ?>"
+                                   class="<?php echo isMissingLoginField('password', $missingFields); ?>"
                                    placeholder="Password" required>
                         </div>
                         <div class="field-requirement">Please enter your password</div>
@@ -525,18 +778,18 @@ function isMissingForgotField($fieldType, $missingFields) {
             </div>
             
             <!-- Register Form -->
-            <div id="register-content" class="form-content <?= isActiveForm('register', $activeForm); ?>">
+            <div id="register-content" class="form-content <?php echo isActiveForm('register', $activeForm); ?>">
                 <form action="login-register.php" method="post" id="registerForm">
                     <h2><i class="fas fa-user-plus"></i> Create Account</h2>
                     <p class="form-subtitle">Join our Aqua Community</p>
                     
-                    <?= showError($errors['register']); ?>
+                    <?php echo showError($errors['register']); ?>
                     
                     <div class="input-group">
                         <div class="input-with-icon">
                             <i class="fas fa-user"></i>
                             <input type="text" name="name" 
-                                   class="<?= isMissingField('name', $missingFields); ?>"
+                                   class="<?php echo isMissingField('name', $missingFields); ?>"
                                    placeholder="Full name" required>
                         </div>
                         <div class="field-requirement">Please enter your full name</div>
@@ -546,7 +799,7 @@ function isMissingForgotField($fieldType, $missingFields) {
                         <div class="input-with-icon">
                             <i class="fas fa-envelope"></i>
                             <input type="email" name="email" 
-                                   class="<?= isMissingField('email', $missingFields); ?>"
+                                   class="<?php echo isMissingField('email', $missingFields); ?>"
                                    placeholder="Email address" required>
                         </div>
                         <div class="field-requirement">Please enter a valid .com or .hu email</div>
@@ -556,13 +809,12 @@ function isMissingForgotField($fieldType, $missingFields) {
                         <div class="input-with-icon">
                             <i class="fas fa-lock"></i>
                             <input type="password" name="password" id="registerPassword" 
-                                   class="<?= isMissingField('password', $missingFields); ?>"
+                                   class="<?php echo isMissingField('password', $missingFields); ?>"
                                    placeholder="Create password" required
                                    oninput="checkPasswordStrength()">
                         </div>
                         <div class="field-requirement">Password is required and must meet all requirements</div>
                         
-                        <!--Jleszó Szökség -->
                         <div class="password-requirements">
                             <div class="requirement" id="req-length">
                                 <span class="indicator" id="ind-length">●</span>
@@ -598,20 +850,22 @@ function isMissingForgotField($fieldType, $missingFields) {
                 </form>
             </div>
             
-            <!-- Jelszós Form -->
-            <div id="forgot-content" class="form-content <?= isActiveForm('forgot', $activeForm); ?>">
+            <!-- Forgot Password Form -->
+            <div id="forgot-content" class="form-content <?php echo isActiveForm('forgot', $activeForm); ?>">
                 <form action="login-register.php" method="post">
                     <h2><i class="fas fa-key"></i> Reset Password</h2>
                     <p class="form-subtitle">Enter your details to reset your password</p>
                     
-                    <?= showError($errors['forgot']); ?>
-                    <?= showSuccess($success['forgot']); ?>
+                    <?php 
+                    echo showError($errors['forgot']);
+                    echo showSuccess($success['forgot']);
+                    ?>
                     
                     <div class="input-group">
                         <div class="input-with-icon">
                             <i class="fas fa-envelope"></i>
                             <input type="email" name="email" 
-                                   class="<?= isMissingForgotField('email', $missingFields); ?>"
+                                   class="<?php echo isMissingForgotField('email', $missingFields); ?>"
                                    placeholder="Enter your registered email" required>
                         </div>
                         <div class="field-requirement">Please enter your registered email</div>
@@ -621,7 +875,7 @@ function isMissingForgotField($fieldType, $missingFields) {
                         <div class="input-with-icon">
                             <i class="fas fa-lock"></i>
                             <input type="password" name="new_password" 
-                                   class="<?= isMissingForgotField('new_password', $missingFields); ?>"
+                                   class="<?php echo isMissingForgotField('new_password', $missingFields); ?>"
                                    placeholder="New password" required>
                         </div>
                         <div class="field-requirement">Please enter a new password</div>
@@ -631,7 +885,7 @@ function isMissingForgotField($fieldType, $missingFields) {
                         <div class="input-with-icon">
                             <i class="fas fa-lock"></i>
                             <input type="password" name="confirm_password" 
-                                   class="<?= isMissingForgotField('confirm_password', $missingFields); ?>"
+                                   class="<?php echo isMissingForgotField('confirm_password', $missingFields); ?>"
                                    placeholder="Confirm new password" required>
                         </div>
                         <div class="field-requirement">Please confirm your new password</div>
@@ -645,7 +899,7 @@ function isMissingForgotField($fieldType, $missingFields) {
         </div>
     </div>
     
-    <!-- Hi Side -->
+    <!-- Welcome Side -->
     <div class="welcome-side">
         <div class="welcome-content">
             <div class="logo">
@@ -681,7 +935,7 @@ function isMissingForgotField($fieldType, $missingFields) {
             
             <div class="stats">
                 <div class="stat">
-                    <h3><?= number_format($userCount) ?>+</h3>
+                    <h3><?php echo number_format($userCount); ?>+</h3>
                     <p>Total Users</p>
                 </div>
                 <div class="stat">
@@ -701,11 +955,14 @@ function isMissingForgotField($fieldType, $missingFields) {
 document.addEventListener('DOMContentLoaded', function() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const formContents = document.querySelectorAll('.form-content');
+    
     tabBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             const tabId = this.getAttribute('data-tab');
+            
             tabBtns.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
+            
             formContents.forEach(content => {
                 content.classList.remove('active');
                 if (content.id === tabId + '-content') {
@@ -729,7 +986,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const registerPassword = document.getElementById('registerPassword');
     if (registerPassword) {
         registerPassword.addEventListener('input', checkPasswordStrength);
-        checkPasswordStrength(); 
+        checkPasswordStrength();
     }
     
     setTimeout(() => {
@@ -752,7 +1009,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-//Jelszó errőségének vizsgálata
 function checkPasswordStrength() {
     const passwordInput = document.getElementById('registerPassword');
     const registerButton = document.getElementById('registerButton');
@@ -761,7 +1017,6 @@ function checkPasswordStrength() {
     
     const password = passwordInput.value;
     
-    //Szükségletek
     const requirements = {
         length: password.length >= 6,
         uppercase: /[A-Z]/.test(password),
@@ -769,7 +1024,6 @@ function checkPasswordStrength() {
         special: /[!@#$%^&*()\-_=+{};:,<.>]/.test(password)
     };
     
-    //Indicatorok frissitésa ami a felhasznalon mulik
     Object.keys(requirements).forEach(key => {
         const requirement = document.getElementById(`req-${key}`);
         const indicator = document.getElementById(`ind-${key}`);
@@ -787,7 +1041,6 @@ function checkPasswordStrength() {
         }
     });
     
-    //Be és ki kapcsolása a regisztráció gombnak
     if (registerButton) {
         const allValid = Object.values(requirements).every(req => req);
         registerButton.disabled = !allValid;
@@ -800,7 +1053,6 @@ function checkPasswordStrength() {
     }
 }
 
-//Form validáció
 function validateForm(formId) {
     const form = document.getElementById(formId);
     let isValid = true;
@@ -813,7 +1065,6 @@ function validateForm(formId) {
                 isValid = false;
                 input.classList.add('missing-field');
                 
-                //Üzenet ha hiba van
                 const requirement = input.closest('.input-group').querySelector('.field-requirement');
                 if (requirement) {
                     requirement.style.display = 'block';
