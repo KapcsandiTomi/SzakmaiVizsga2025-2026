@@ -94,7 +94,7 @@ if (!isset($_SESSION['email'])) {
     <div class="team-container">
         <div class="team-card">
             <div class="team-image">
-                <img src="KapcsiTomi.JPEG" alt="Kapcsándi Tamás">
+                <img src="img/KapcsiTomi.JPEG" alt="Kapcsándi Tamás">
             </div>
             <div class="team-content">
                 <h3>Kapcsándi Tamás</h3>
@@ -133,7 +133,7 @@ if (!isset($_SESSION['email'])) {
         </div>
         <div class="team-card">
             <div class="team-image">
-                <img src="HajasMate.jpg" alt="Hajas Máté">
+                <img src="img/HajasMate.jpg" alt="Hajas Máté">
             </div>
             <div class="team-content">
                 <h3>Hajas Máté</h3>
@@ -170,7 +170,7 @@ if (!isset($_SESSION['email'])) {
         </div>
         <div class="team-card">
             <div class="team-image">
-                <img src="HrustinszkiMarci.jpg" alt="Hrusztinszki Márton">
+                <img src="img/HrustinszkiMarci.jpg" alt="Hrusztinszki Márton">
             </div>
             <div class="team-content">
                 <h3>Hrusztinszki Márton</h3>
