@@ -1,11 +1,9 @@
 <?php
 session_start();
 
-// Adatbázis kapcsolat
 require_once 'config.php';
 require_once 'handler/userhandler.php';
 
-// Felhasználó számlálás
 $userCount = 0;
 try {
     $userHandler = new UserHandler($conn);
@@ -34,7 +32,8 @@ unset(
     $_SESSION['forgot_error'],
     $_SESSION['register_success'],
     $_SESSION['forgot_success'],
-    $_SESSION['active_form']
+    $_SESSION['active_form'],
+    $_SESSION['missing_fields']
 );
 
 function showError($error) {
@@ -73,6 +72,7 @@ function isMissingForgotField($fieldType, $missingFields) {
     return in_array($fieldName, $missingFields) ? 'missing-field' : '';
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
