@@ -1,14 +1,32 @@
 <?php
+session_start();
+$profile_success = $_SESSION['profile_success'] ?? '';
+$profile_error = $_SESSION['profile_error'] ?? '';
+$password_success = $_SESSION['password_success'] ?? '';
+$password_error = $_SESSION['password_error'] ?? '';
+$picture_success = $_SESSION['picture_success'] ?? '';
+$picture_error = $_SESSION['picture_error'] ?? '';
+
+unset(
+    $_SESSION['profile_success'],
+    $_SESSION['profile_error'],
+    $_SESSION['password_success'],
+    $_SESSION['password_error'],
+    $_SESSION['picture_success'],
+    $_SESSION['picture_error']
+);
+
 require_once 'handler/profilehandler.php';
 
 $handler = new ProfileHandler();
 $user = $handler->getCurrentUser();
-$favorites = $handler->getUserFavorites();
-$errors = $handler->getErrors();
-$successMessages = $handler->getSuccessMessages();
 
-$update_success = !empty($successMessages) ? implode('<br>', $successMessages) : '';
-$update_error = !empty($errors) ? implode('<br>', $errors) : '';
+if (!$user) {
+    header('Location: index.php');
+    exit();
+}
+
+$favorites = $handler->getUserFavorites();
 ?>
 
 <!DOCTYPE html>
@@ -23,6 +41,64 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="icon" href="letoles.jpg" type="image/png">
     <style>
+        .alert-message {
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            animation: slideIn 0.5s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .alert-message.success {
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            color: white;
+            border-left: 5px solid #1b5e20;
+        }
+        
+        .alert-message.error {
+            background: linear-gradient(135deg, #f44336, #c62828);
+            color: white;
+            border-left: 5px solid #b71c1c;
+        }
+        
+        .alert-message i {
+            font-size: 20px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .form-error {
+            color: #f44336;
+            font-size: 14px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .input-error {
+            border-color: #f44336 !important;
+            background: rgba(244, 67, 54, 0.05) !important;
+        }
+        
+        .input-success {
+            border-color: #4caf50 !important;
+            background: rgba(76, 175, 80, 0.05) !important;
+        }
+        
         .favorites-section {
             background: white;
             border-radius: 15px;
@@ -296,16 +372,40 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
 
         <!-- Jobb oldal - Beállítások -->
         <div class="profile-right">
-            <!-- Üzenetek -->
-            <?php if ($update_success): ?>
+            <!-- Üzenetek megjelenítése -->
+            <?php if ($profile_success): ?>
                 <div class="alert-message success">
-                    <i class="fas fa-check-circle"></i> <?php echo $update_success; ?>
+                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($profile_success); ?>
                 </div>
             <?php endif; ?>
             
-            <?php if ($update_error): ?>
+            <?php if ($profile_error): ?>
                 <div class="alert-message error">
-                    <i class="fas fa-exclamation-circle"></i> <?php echo $update_error; ?>
+                    <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($profile_error); ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($password_success): ?>
+                <div class="alert-message success">
+                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($password_success); ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($password_error): ?>
+                <div class="alert-message error">
+                    <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($password_error); ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($picture_success): ?>
+                <div class="alert-message success">
+                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($picture_success); ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($picture_error): ?>
+                <div class="alert-message error">
+                    <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($picture_error); ?>
                 </div>
             <?php endif; ?>
 
@@ -320,7 +420,8 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
                             <input type="text" name="name" 
                                    value="<?php echo htmlspecialchars($user['name']); ?>" 
                                    placeholder="Enter your username" 
-                                   required>
+                                   required 
+                                   class="<?php echo $profile_error ? 'input-error' : ''; ?>">
                         </div>
                     </div>
                     
@@ -331,7 +432,8 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
                             <input type="email" name="email" 
                                    value="<?php echo htmlspecialchars($user['email']); ?>" 
                                    placeholder="Enter your email" 
-                                   required>
+                                   required 
+                                   class="<?php echo $profile_error ? 'input-error' : ''; ?>">
                         </div>
                     </div>
                     
@@ -351,7 +453,8 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
                             <i class="fas fa-key"></i>
                             <input type="password" name="current_password" 
                                    placeholder="Enter current password" 
-                                   required>
+                                   required 
+                                   class="<?php echo $password_error ? 'input-error' : ''; ?>">
                         </div>
                     </div>
                     
@@ -362,7 +465,8 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
                                 <i class="fas fa-key"></i>
                                 <input type="password" name="new_password" 
                                        placeholder="Enter new password" 
-                                       required>
+                                       required 
+                                       class="<?php echo $password_error ? 'input-error' : ''; ?>">
                             </div>
                         </div>
                         
@@ -372,7 +476,8 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
                                 <i class="fas fa-key"></i>
                                 <input type="password" name="confirm_password" 
                                        placeholder="Confirm new password" 
-                                       required>
+                                       required 
+                                       class="<?php echo $password_error ? 'input-error' : ''; ?>">
                             </div>
                         </div>
                     </div>
@@ -387,7 +492,7 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
             <div class="settings-section">
                 <h3><i class="fas fa-image me-2"></i> Profile Picture</h3>
                 <form method="post" enctype="multipart/form-data" class="profile-form">
-                    <div class="upload-area">
+                    <div class="upload-area <?php echo $picture_error ? 'input-error' : ($picture_success ? 'input-success' : ''); ?>">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <p>Drag & drop your image here or <span class="browse-text">browse</span></p>
                         <small>Max file size: 5MB. Allowed: JPG, PNG, GIF</small>
@@ -482,31 +587,38 @@ $update_error = !empty($errors) ? implode('<br>', $errors) : '';
 <script>
 document.getElementById('profile_pic').addEventListener('change', function() {
     if (this.files.length > 0) {
-        document.getElementById('quickUploadForm').submit();
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.enctype = 'multipart/form-data';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'change_picture';
+        input.value = '1';
+        form.appendChild(input);
+        
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.name = 'profile_pic';
+        fileInput.files = this.files;
+        form.appendChild(fileInput);
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 });
-
-//UPLOAD RÉSZ 
 document.querySelector('.browse-text').addEventListener('click', function() {
     document.querySelector('input[name="profile_pic"]').click();
 });
 
-// Kedvenc gombok
-document.querySelectorAll('.favorite-btn').forEach(btn => {
-    btn.addEventListener('mouseenter', function() {
-        if (!this.classList.contains('active')) {
-            this.style.background = '#ffd700';
-            this.querySelector('.fa-heart').style.color = '#ff4444';
-        }
+setTimeout(function() {
+    const alerts = document.querySelectorAll('.alert-message');
+    alerts.forEach(alert => {
+        alert.style.transition = 'opacity 0.5s ease';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
     });
-    
-    btn.addEventListener('mouseleave', function() {
-        if (!this.classList.contains('active')) {
-            this.style.background = '';
-            this.querySelector('.fa-heart').style.color = '';
-        }
-    });
-});
+}, 5000);
 </script>
 
 <script src="javas.js"></script>
