@@ -1,57 +1,28 @@
 <?php
 session_start();
-include 'config.php'; //Adatbázis kapcsolat
+require_once 'config.php';
+require_once 'handler/ratedata.php';
+require_once 'handler/ratehandler.php';
 
-//Amit kiiratunk -- ebben az esetben How was your shopping here?
-$review_title = "How was your shopping here?";
-$page_title = "Aqua Mini Shop - Shopping Experience Review";
+// Handler
+$handler = new RateHandler();
+$handler->handleRequest();
 
-//Hibák tárolása
-$errors = [];
+// Adatok lekérése
+$model = $handler->getModel();
+$errors = $handler->getErrors();
 
-//POST-OLÁS, majd tárolás
-if(isset($_POST['submit_review'])){
-    //Validáció
-    $user_name = trim($_POST['user_name'] ?? '');
-    $rating = isset($_POST['rating']) ? (int)$_POST['rating'] : 0;
-    $comment = trim($_POST['comment'] ?? '');
-    
-    //Hibák ellenőrzése
-    if(empty($user_name)){
-        $errors[] = "Please enter your name.";
-    }
-    
-    if($rating < 1 || $rating > 5){
-        $errors[] = "Please select a valid rating.";
-    }
-    
-    if(empty($comment)){
-        $errors[] = "Please write your review.";
-    }
-    
-    //Ha nincs hiba, mentjük az adatbázisba
-    if(empty($errors)){
-        $user_name = $conn->real_escape_string($user_name);
-        $comment = $conn->real_escape_string($comment);
-        
-        $sql = "INSERT INTO reviews (product_name, user_name, rating, comment) 
-                VALUES ('$review_title', '$user_name', $rating, '$comment')";
-                                                                                                                                
-        if($conn->query($sql)){
-            //SIKERES MENTÉS
-            $_SESSION['success_message'] = "Thank you! Your review has been submitted successfully.";
-        } else {
-            //DATABASE ERR
-            $errors[] = "Error saving review: " . $conn->error;
-        }
-        
-        //Átirányítás, hogy ne maradjon a POST adat
-        header("Location: ".$_SERVER['PHP_SELF']);
-        exit();
-    }
+$review_title = $model->getReviewTitle();
+$page_title = $model->getPageTitle();
+$reviews = $model->getAllReviews();
+$stats = $model->getReviewStats();
+
+// Sikerüzenet
+$success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
+if(isset($_SESSION['success_message'])) {
+    unset($_SESSION['success_message']);
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -163,7 +134,6 @@ if(isset($_POST['submit_review'])){
             border-radius: 10px;
             border-left: 5px solid #667eea;
         }
-        
 
         .error-container {
             background: #ffe6e6;
@@ -206,7 +176,7 @@ if(isset($_POST['submit_review'])){
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 20px;
-            display: <?php echo isset($_SESSION['success_message']) ? 'block' : 'none'; ?>;
+            display: <?php echo !empty($success_message) ? 'block' : 'none'; ?>;
         }
         
         .success-title {
@@ -453,17 +423,15 @@ if(isset($_POST['submit_review'])){
     </div>
     
     <div class="review-container">
-        <!-- SIEKREK ÜZENET FORMÁBAN -->
-        <?php if(isset($_SESSION['success_message'])): ?>
+        <!-- SIKER ÜZENET -->
+        <?php if(!empty($success_message)): ?>
         <div class="success-container">
             <div class="success-title">
                 <i class="fas fa-check-circle"></i> Success!
             </div>
-            <p><?php echo $_SESSION['success_message']; ?></p>
+            <p><?php echo $success_message; ?></p>
         </div>
-        <?php 
-            unset($_SESSION['success_message']);
-        endif; ?>
+        <?php endif; ?>
         
         <!-- HIBA ÜZENETEK -->
         <?php if(!empty($errors)): ?>
@@ -537,80 +505,52 @@ if(isset($_POST['submit_review'])){
 
         <br>
         
-        <!-- STAT NAGY FOCI FANOKNAK, ÁTLAG, ÖSSZES ADATBÁZISBÓL -->
-        <?php
-        try {
-            $total_reviews = $conn->query("SELECT COUNT(*) as total FROM reviews WHERE product_name='$review_title'")->fetch_assoc()['total'];
-            $avg_rating = $conn->query("SELECT AVG(rating) as avg FROM reviews WHERE product_name='$review_title'")->fetch_assoc()['avg'];
-            $avg_rating = number_format($avg_rating, 1);
-            
-            if($total_reviews > 0):
-        ?>
+        <!-- STATISZTIKÁK -->
+        <?php if($stats['total_reviews'] > 0): ?>
         <div class="stats">
             <div class="stat-item">
-                <h3><?php echo $total_reviews; ?></h3>
+                <h3><?php echo $stats['total_reviews']; ?></h3>
                 <p>Total Reviews</p>
             </div>
             <div class="stat-item">
-                <h3><?php echo $avg_rating; ?>/5</h3>
+                <h3><?php echo $stats['avg_rating']; ?>/5</h3>
                 <p>Average Rating</p>
             </div>
         </div>
-        <?php 
-            endif;
-        } catch(Exception $e) {
-            echo '<div class="error-container" style="margin-top: 20px;">';
-            echo '<div class="error-title"><i class="fas fa-exclamation-triangle"></i> Database Error</div>';
-            echo '<p>Could not load statistics: ' . htmlspecialchars($e->getMessage()) . '</p>';
-            echo '</div>';
-        }
-        ?>
+        <?php endif; ?>
         
-        <!-- MEGJELENITES -->
+        <!-- VÉLEMÉNYEK MEGJELENÍTÉSE -->
         <div class="reviews-section">
             <h3 class="reviews-title">Customer Reviews</h3>
             
-            <?php
-            try {
-                $result = $conn->query("SELECT * FROM reviews WHERE product_name='$review_title' ORDER BY created_at DESC LIMIT 20");
-                if($result->num_rows > 0){
-                    while($row = $result->fetch_assoc()){
-                        echo "<div class='review-card'>";
-                        echo "<div class='review-header'>";
-                        echo "<div class='reviewer-name'>" . htmlspecialchars($row['user_name']) . "</div>";
-                        echo "<div class='review-date'>" . date('F j, Y', strtotime($row['created_at'])) . "</div>";
-                        echo "</div>";
-                        echo "<div class='review-stars'>" . str_repeat("★", $row['rating']) . str_repeat("☆", 5 - $row['rating']) . "</div>";
-                        echo "<div class='review-comment'>" . nl2br(htmlspecialchars($row['comment'])) . "</div>";
-                        echo "</div>";
-                    }
-                } else {
-                    echo "<div class='no-reviews'>No reviews yet. Be the first to share your shopping experience!</div>";
-                }
-            } catch(Exception $e) {
-                echo '<div class="error-container">';
-                echo '<div class="error-title"><i class="fas fa-exclamation-triangle"></i> Error Loading Reviews</div>';
-                echo '<p>Could not load reviews: ' . htmlspecialchars($e->getMessage()) . '</p>';
-                echo '</div>';
-            }
-            ?>
+            <?php if(count($reviews) > 0): ?>
+                <?php foreach($reviews as $row): ?>
+                <div class='review-card'>
+                    <div class='review-header'>
+                        <div class='reviewer-name'><?php echo htmlspecialchars($row['user_name']); ?></div>
+                        <div class='review-date'><?php echo date('F j, Y', strtotime($row['created_at'])); ?></div>
+                    </div>
+                    <div class='review-stars'><?php echo str_repeat("★", $row['rating']) . str_repeat("☆", 5 - $row['rating']); ?></div>
+                    <div class='review-comment'><?php echo nl2br(htmlspecialchars($row['comment'])); ?></div>
+                </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class='no-reviews'>No reviews yet. Be the first to share your shopping experience!</div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
 <script>
-    //CSILLAGOK LEFRISSITÉSE
     document.addEventListener('DOMContentLoaded', function() {
         const stars = document.querySelectorAll('.star');
         const ratingSelect = document.getElementById('ratingSelect');
         
-        //ELMENTÉSE
         stars.forEach(star => {
             star.addEventListener('click', function() {
                 const value = this.getAttribute('data-value');
                 ratingSelect.value = value;
                 
-                //CSILLAG FRISSITÉSE
                 stars.forEach(s => {
                     const icon = s.querySelector('i');
                     const sValue = s.getAttribute('data-value');
@@ -628,25 +568,21 @@ if(isset($_POST['submit_review'])){
             });
         });
         
-        //Ha Elküldjük az űrlapot akkor értesit
         const reviewForm = document.getElementById('reviewForm');
         reviewForm.addEventListener('submit', function() {
-            //Siker
             setTimeout(() => {
                 alert('Thank you for your feedback! Your review has been submitted.');
             }, 100);
         });
         
-        //Összes értékelés betöltése ha sok van akkor is
-        const loadMoreBtn = document.createElement('button');
-        loadMoreBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Load More Reviews';
-        loadMoreBtn.style.cssText = 'background: linear-gradient(to right, #667eea, #1d9cd3ff); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; margin: 20px auto; display: block;';
-        loadMoreBtn.addEventListener('click', function() {
-            alert('There are not enough reviews to show more.');
-        });
-        
-        //Csak akkor adjuk hozzá, ha vannak review-k
         if(document.querySelector('.review-card')) {
+            const loadMoreBtn = document.createElement('button');
+            loadMoreBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Load More Reviews';
+            loadMoreBtn.style.cssText = 'background: linear-gradient(to right, #667eea, #1d9cd3ff); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; margin: 20px auto; display: block;';
+            loadMoreBtn.addEventListener('click', function() {
+                alert('There are not enough reviews to show more.');
+            });
+            
             document.querySelector('.reviews-section').appendChild(loadMoreBtn);
         }
     });
