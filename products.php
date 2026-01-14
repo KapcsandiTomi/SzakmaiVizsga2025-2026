@@ -309,7 +309,7 @@ if (!isset($_SESSION['favorites']) && $user_id) {
 
 <main>
     <h1 class="tech-builder-link">
-        <a href="pc_builder/index.php">
+        <a href="/Szak/pc_builder/">
             <span class="tech-text">🎮 BUILD YOUR ULTIMATE PC</span>
             <span class="glow">CLICK TO START</span>
         </a>
