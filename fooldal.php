@@ -347,7 +347,7 @@ $avg_rating = $stats['avg_rating'];
 
 <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1): ?>
     <div class = "admin-page">
-      <b><a href="admin/admin.php">⚙️ Admin Panel</a></b>
+      <b><a href="admin/index.php">⚙️ Admin Panel</a></b>
     </div>
 <?php endif; ?>
 
