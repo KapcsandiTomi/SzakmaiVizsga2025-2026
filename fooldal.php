@@ -7,37 +7,16 @@ if (!isset($_SESSION['email'])) {
 
 // Adatbázis kapcsolat
 include 'config.php';
+require_once 'handler/ratedata.php';
 
-// Vélemények lekérése a rateus.php-ból
-$review_title = "How was your shopping here?";
-$reviews = [];
-$total_reviews = 0;
-$avg_rating = 0;
+// RateData modell létrehozása
+$rateModel = new RateData($conn);
 
-try {
-    // Összes vélemény lekérése
-    $result = $conn->query("SELECT * FROM reviews WHERE product_name='$review_title' ORDER BY created_at DESC LIMIT 3");
-    if($result->num_rows > 0) {
-        while($row = $result->fetch_assoc()) {
-            $reviews[] = $row;
-        }
-    }
-    
-    //STATS
-    $total_result = $conn->query("SELECT COUNT(*) as total FROM reviews WHERE product_name='$review_title'");
-    if($total_result) {
-        $total_data = $total_result->fetch_assoc();
-        $total_reviews = $total_data['total'];
-    }
-    
-    $avg_result = $conn->query("SELECT AVG(rating) as avg FROM reviews WHERE product_name='$review_title'");
-    if($avg_result) {
-        $avg_data = $avg_result->fetch_assoc();
-        $avg_rating = number_format($avg_data['avg'], 1);
-    }
-} catch(Exception $e) {
-    // Hibakezelés - semmi se törénik
-}
+// Vélemények lekérése
+$reviews = $rateModel->getReviewsForHomepage(3);
+$stats = $rateModel->getReviewStats();
+$total_reviews = $stats['total_reviews'];
+$avg_rating = $stats['avg_rating'];
 ?>
 
 <!DOCTYPE html>
@@ -52,7 +31,6 @@ try {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="icon" href="letoles.jpg" type="image/png">
     <style>
-        /* STYLES A FELHASZNALÓI VÉLEMÉNYEKHEZ */
         .testimonials-container {
             max-width: 1200px;
             margin: 60px auto;
@@ -443,7 +421,7 @@ try {
     </div>
   </div>
 
-  <!-- RATEUS vélemények betevése -->
+  <!-- RATEUS vélemények megjelenítése -->
   <div class="testimonials-container">
     <div class="testimonials-header">
       <h2>What Our Customers Say</h2>
@@ -549,15 +527,12 @@ try {
 </footer>
 
 <script>
-// Vélemények automatikus rotálása
 document.addEventListener('DOMContentLoaded', function() {
     const testimonialCards = document.querySelectorAll('.testimonial-card');
     
-    // Csak akkor, ha vannak testimonial kártyák
     if(testimonialCards.length > 1) {
         let currentIndex = 0;
         
-        // Automatikus rotáció minden 80 másodpercben
         setInterval(() => {
             testimonialCards.forEach(card => card.style.display = 'none');
             
