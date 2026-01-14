@@ -99,7 +99,7 @@ if (!isset($_SESSION['email'])) {
     <a href="writeUs.php">Write US!</a>
   </p>
   <div class="faq-image">
-    <img src="faq.jpg" alt="FAQ">
+    <img src="img/faq.jpg" alt="FAQ">
   </div>
   </section>
   <section class="faq-section">
