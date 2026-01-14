@@ -1,40 +1,28 @@
 <?php
-// ====================
-// SESSION START (nagyon fontos!)
-// ====================
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// ====================
-// CONFIG BETÖLTÉS
-// ====================
+
 require_once __DIR__ . '/../config.php';
 
-// ====================
-// JOGOSULTSÁG ELLENŐRZÉS
-// ====================
-// Ha NINCS bejelentkezve, akkor a bejelentkezési oldalra
+
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../index.php");
     exit();
 }
 
-// Ha be van jelentkezve, de NEM admin, akkor vissza a főoldalra
+
 if ($_SESSION['is_admin'] != 1) {
     header("Location: ../fooldal.php");
     exit();
 }
 
-// ====================
-// DEBUG (később ki lehet kapcsolni)
-// ====================
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// ====================
-// AUTOLOAD HELPER
-// ====================
+
 function loadController($controller) {
     $controllerFile = __DIR__ . '/controllers/' . $controller . '.php';
     if (file_exists($controllerFile)) {
@@ -53,16 +41,12 @@ function loadModel($model) {
     }
 }
 
-// ====================
-// MODELLEK BETÖLTÉSE
-// ====================
+
 loadModel('UserModel');
 loadModel('OrderModel');
 loadModel('PCModel');
 
-// ====================
-// ROUTING LOGIKA
-// ====================
+
 $page = $_GET['page'] ?? 'dashboard';
 $action = $_GET['action'] ?? 'index';
 $id = $_GET['id'] ?? null;
@@ -138,14 +122,13 @@ try {
             }
             break;
             
-        default: // dashboard
+        default:
             loadController('AdminController');
             $controller = new AdminController($conn);
             $controller->index();
             break;
     }
 } catch (Exception $e) {
-    // Hibakezelés - lehet debug módban hagyni
     echo "<div style='background: #f8d7da; color: #721c24; padding: 20px; margin: 20px; border-radius: 8px;'>";
     echo "<h3>Hiba történt:</h3>";
     echo "<p><strong>Üzenet:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
@@ -155,9 +138,7 @@ try {
     echo "</div>";
 }
 
-// ====================
-// CLEANUP
-// ====================
+
 if (isset($conn) && $conn->ping()) {
     $conn->close();
 }
