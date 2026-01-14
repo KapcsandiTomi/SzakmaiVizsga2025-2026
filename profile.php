@@ -1,189 +1,14 @@
 <?php
-// ============================================
-// MUNKAMENET KEZDÉS ÉS KONFIGURÁCIÓ
-// ============================================
-session_start(); 
-require_once 'config.php'; 
+require_once 'handler/profilehandler.php';
 
-// ============================================
-// BEJELENTKEZÉSI ÁLLAPOT ELLENŐRZÉSE
-// ============================================
-if (!isset($_SESSION['email'])) {
-    header('Location: index.php'); 
-    exit(); 
-}
+$handler = new ProfileHandler();
+$user = $handler->getCurrentUser();
+$favorites = $handler->getUserFavorites();
+$errors = $handler->getErrors();
+$successMessages = $handler->getSuccessMessages();
 
-// ============================================
-// FELHASZNÁLÓI ADATOK BETÖLTÉSE
-// ============================================
-$email = $_SESSION['email'];
-
-$stmt = $conn->prepare("SELECT id, name, email, profile_pic FROM `4` WHERE email = ?");
-$stmt->bind_param("s", $email);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-
-// ============================================
-// KEDVENCEK BETÖLTÉSE
-// ============================================
-$favorites = [];
-$favoritesStmt = $conn->prepare("SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC");
-$favoritesStmt->bind_param("i", $user['id']);
-$favoritesStmt->execute();
-$favoritesResult = $favoritesStmt->get_result();
-while ($row = $favoritesResult->fetch_assoc()) {
-    $favorites[] = $row;
-}
-$favoritesStmt->close();
-
-// ============================================
-// VÁLTOZÓK INICIALIZÁLÁSA
-// ============================================
-$update_success = '';
-$update_error = '';
-
-
-// ============================================
-// FELHASZNÁLÓNÉV ÉS EMAIL MÓDOSÍTÁSA
-// ============================================
-if (isset($_POST['update_profile'])) {
-    $newName = trim($_POST['name'] ?? '');
-    $newEmail = trim($_POST['email'] ?? '');
-    
-    // Validáció
-    if (empty($newName) || empty($newEmail)) {
-        $update_error = "Both fields are required!";
-    } elseif (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-        $update_error = "Invalid email format!";
-    } elseif (strlen($newName) < 3) {
-        $update_error = "Username must be at least 3 characters!";
-    } else {
-        // Ellenőrizzük, hogy az új email már foglalt-e
-        if ($newEmail !== $email) {
-            $checkStmt = $conn->prepare("SELECT id FROM `4` WHERE email = ? AND id != ?");
-            $checkStmt->bind_param("si", $newEmail, $user['id']);
-            $checkStmt->execute();
-            $checkResult = $checkStmt->get_result();
-            
-            if ($checkResult->num_rows > 0) {
-                $update_error = "Email already exists!";
-                $checkStmt->close();
-            } else {
-                $checkStmt->close();
-                
-                // Frissítjük az adatokat
-                $updateStmt = $conn->prepare("UPDATE `4` SET name = ?, email = ? WHERE id = ?");
-                $updateStmt->bind_param("ssi", $newName, $newEmail, $user['id']);
-                
-                if ($updateStmt->execute()) {
-                    $update_success = "Profile updated successfully!";
-                    $_SESSION['email'] = $newEmail;
-                    $user['name'] = $newName;
-                    $user['email'] = $newEmail;
-                } else {
-                    $update_error = "Update failed!";
-                }
-                $updateStmt->close();
-            }
-        } else {
-            // Csak a név változott
-            $updateStmt = $conn->prepare("UPDATE `4` SET name = ? WHERE id = ?");
-            $updateStmt->bind_param("si", $newName, $user['id']);
-            
-            if ($updateStmt->execute()) {
-                $update_success = "Profile updated successfully!";
-                $user['name'] = $newName;
-            } else {
-                $update_error = "Update failed!";
-            }
-            $updateStmt->close();
-        }
-    }
-}
-
-// ============================================
-// JELSZÓ MÓDOSÍTÁS
-// ============================================
-if (isset($_POST['change_password'])) {
-    $currentPassword = $_POST['current_password'] ?? '';
-    $newPassword = $_POST['new_password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
-
-    // Jelenlegi jelszó ellenőrzése
-    $stmt = $conn->prepare("SELECT password FROM `4` WHERE id = ?");
-    $stmt->bind_param("i", $user['id']);
-    $stmt->execute();
-    $stmt->bind_result($hashedPassword);
-    $stmt->fetch();
-    $stmt->close();
-    
-    if (!password_verify($currentPassword, $hashedPassword)) {
-        $update_error = "The current password is incorrect!";
-    } elseif ($newPassword !== $confirmPassword) {
-        $update_error = "The new passwords do not match!";
-    } elseif (strlen($newPassword) < 6) {
-        $update_error = "Password must be at least 6 characters!";
-    } else {
-        // Új jelszó titkosítása
-        $newHashed = password_hash($newPassword, PASSWORD_DEFAULT);
-        
-        $stmt = $conn->prepare("UPDATE `4` SET password = ? WHERE id = ?");
-        $stmt->bind_param("si", $newHashed, $user['id']);
-        
-        if ($stmt->execute()) {
-            $update_success = "Password successfully changed!";
-        } else {
-            $update_error = "Password change failed!";
-        }
-        $stmt->close();
-    }
-}
-
-// ============================================
-// PROFILKÉP MÓDOSÍTÁSA
-// ============================================
-if (isset($_POST['change_picture']) && isset($_FILES['profile_pic'])) {
-    $targetDir = "uploads/";
-    
-    if (!is_dir($targetDir)) {
-        mkdir($targetDir, 0755, true);
-    }
-
-    $fileName = basename($_FILES["profile_pic"]["name"]);
-    $targetFile = $targetDir . uniqid() . "_" . $fileName;
-    $imageFileType = strtolower(pathinfo($targetFile, PATHINFO_EXTENSION));
-    
-    $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
-    $maxFileSize = 5 * 1024 * 1024;
-    
-    if (!in_array($imageFileType, $allowedTypes)) {
-        $update_error = "Only JPG, JPEG, PNG and GIF files are allowed!";
-    } elseif ($_FILES["profile_pic"]["size"] > $maxFileSize) {
-        $update_error = "File is too large. Maximum size is 5MB!";
-    } else {
-        if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $targetFile)) {
-            // Régi kép törlése
-            if ($user['profile_pic'] && file_exists($user['profile_pic']) && 
-                strpos($user['profile_pic'], 'uploads/') !== false) {
-                unlink($user['profile_pic']);
-            }
-            
-            $stmt = $conn->prepare("UPDATE `4` SET profile_pic = ? WHERE id = ?");
-            $stmt->bind_param("si", $targetFile, $user['id']);
-            
-            if ($stmt->execute()) {
-                $update_success = "Profile picture uploaded successfully!";
-                $user['profile_pic'] = $targetFile;
-            } else {
-                $update_error = "Failed to update profile picture in database!";
-            }
-            $stmt->close();
-        } else {
-            $update_error = "There was an error uploading your file!";
-        }
-    }
-}
+$update_success = !empty($successMessages) ? implode('<br>', $successMessages) : '';
+$update_error = !empty($errors) ? implode('<br>', $errors) : '';
 ?>
 
 <!DOCTYPE html>
@@ -655,7 +480,6 @@ if (isset($_POST['change_picture']) && isset($_FILES['profile_pic'])) {
 </footer>
 
 <script>
-//Submit form, auto-load
 document.getElementById('profile_pic').addEventListener('change', function() {
     if (this.files.length > 0) {
         document.getElementById('quickUploadForm').submit();
@@ -667,7 +491,7 @@ document.querySelector('.browse-text').addEventListener('click', function() {
     document.querySelector('input[name="profile_pic"]').click();
 });
 
-// Kedvenc gombok hover effect
+// Kedvenc gombok
 document.querySelectorAll('.favorite-btn').forEach(btn => {
     btn.addEventListener('mouseenter', function() {
         if (!this.classList.contains('active')) {
