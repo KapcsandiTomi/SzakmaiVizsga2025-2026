@@ -1,416 +1,90 @@
 <?php
-// ====================
-// MUNKAMENET KEZDÉS
-// ====================
 session_start();
 require_once 'config.php';
+require_once 'handler/checkouthandler.php';
 
-// ====================
-// PHPMailer BETÖLTÉSE
-// ====================
-require_once 'src/PHPMailer.php';
-require_once 'src/Exception.php';
-require_once 'src/SMTP.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-// ====================
-// JOGOSULTSÁG ELLENŐRZÉS
-// ====================
 if (!isset($_SESSION['email'])) {
+    $_SESSION['login_error'] = 'Please log in to checkout';
     header("Location: index.php");
     exit();
 }
 
-// ====================
-// RENDELÉSI ADATOK
-// ====================
 $order_list = $_SESSION['order'] ?? [];
 
 if (empty($order_list)) {
+    $_SESSION['cart_error'] = 'Your cart is empty';
     header("Location: myorder.php");
     exit();
 }
 
-// ====================
-// KUPON BEÁLLÍTÁSOK
-// ====================
-$validCoupons = [
-    'SUMMER10' => 0.10,
-    'FREESHIP' => 'FREESHIP',
-    'PSGKINGS' => 0.40
-];
-
-$shippingFlat = 4.99;
-$freeShippingOver = 50.00;
-
-// ====================
-// RENDELÉS ÖSSZEGZÉS
-// ====================
-$subTotal = 0.0;
-foreach ($order_list as $item) {
-    $qty = isset($item['quantity']) ? (int)$item['quantity'] : 1;
-    $price = isset($item['price']) ? (float)$item['price'] : 0.0;
-    $subTotal += $price * $qty;
-}
-
-// ====================
-// CSRF TOKEN
-// ====================
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
 }
 
-// ====================
-// VÁLTOZÓK INICIALIZÁLÁS
-// ====================
-$success = false;
-$error = "";
+$shippingFlat = 4.99;
+$freeShippingOver = 50.00;
+
+$handler = new CheckoutHandler($conn, $order_list, $_SESSION);
+
+$subTotal = $handler->getSubTotal();
+$totals = $handler->calculateTotals();
 $appliedCoupon = null;
-$discountAmount = 0.0;
-$shippingCost = ($subTotal >= $freeShippingOver) ? 0.0 : $shippingFlat;
+$discountAmount = $totals['discount_amount'];
+$shippingCost = $totals['shipping_cost'];
 
-// ====================
-// FORM FELDOLGOZÁS
-// ====================
+$checkout_success = $_SESSION['checkout_success'] ?? false;
+$checkout_error = $_SESSION['checkout_error'] ?? '';
+$validation_errors = $_SESSION['validation_errors'] ?? [];
+
+unset(
+    $_SESSION['checkout_success'],
+    $_SESSION['checkout_error'],
+    $_SESSION['validation_errors']
+);
+
+$success = false;
+$orderId = null;
+$customerEmail = '';
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // CSRF ellenőrzés
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        $error = "Invalid request. Please try again.";
-    } else {
-        //ADATOK a DATABSEBOL
-        $name = trim($_POST["fullname"] ?? "");
-        $email = trim($_POST["email"] ?? "");
-        $address = trim($_POST["address"] ?? "");
-        $cardType = trim($_POST["card_type"] ?? "");
-        $cardNumber = preg_replace('/\D/', '', $_POST["card_number"] ?? "");
-        $expiry = trim($_POST["expiry"] ?? "");
-        $cvv = preg_replace('/\D/', '', $_POST["cvv"] ?? "");
-        $terms = isset($_POST['terms']) ? true : false;
-        $coupon = trim($_POST['coupon'] ?? "");
-
-        // ====================
-        // VALIDÁCIÓ
-        // ====================
-        $validationErrors = [];
+        $_SESSION['checkout_error'] = 'Invalid request. Please try again.';
+        header("Location: checkout.php");
+        exit();
+    }
+    
+    $result = $handler->processOrder($_POST);
+    
+    if ($result['success']) {
+        $handler->clearCart();
+        $success = true;
+        $orderId = $result['order_id'];
+        $customerEmail = $result['customer_email'];
+        $customerName = $result['customer_name'];
+        $totalPrice = $result['total_price'];
         
-        if (empty($name)) $validationErrors[] = "Full name is required";
-        if (empty($email)) $validationErrors[] = "Email address is required";
-        if (empty($address)) $validationErrors[] = "Shipping address is required";
-        if (empty($cardType)) $validationErrors[] = "Card type is required";
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $validationErrors[] = "Invalid email address format";
-        if (!preg_match('/^\d{12}$/', $cardNumber)) $validationErrors[] = "Card number must be exactly 12 digits";
-        if (!preg_match('/^\d{3}$/', $cvv)) $validationErrors[] = "CVV must be exactly 3 digits";
-        if (!preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expiry)) $validationErrors[] = "Invalid expiry date format (MM/YY)";
-        if (!$terms) $validationErrors[] = "You must accept the Terms & Conditions and Privacy Policy";
-
-        if (!empty($validationErrors)) {
-            $error = implode("<br>", $validationErrors);
+        $_SESSION['last_order'] = [
+            'order_id' => $orderId,
+            'customer_email' => $customerEmail,
+            'customer_name' => $customerName,
+            'total_price' => $totalPrice,
+            'timestamp' => time()
+        ];
+    } else {
+        if ($result['type'] === 'validation') {
+            $_SESSION['validation_errors'] = $result['errors'];
         } else {
-            // ====================
-            // KUPON FELDOLGOZÁS
-            // ====================
-            if (!empty($coupon) && isset($validCoupons[$coupon])) {
-                $appliedCoupon = $coupon;
-                if ($validCoupons[$coupon] === 'FREESHIP') {
-                    $shippingCost = 0.0;
-                } else {
-                    $discountAmount = $subTotal * floatval($validCoupons[$coupon]);
-                }
-            }
-
-            // ====================
-            // VÉGÖSSZEG SZÁMÍTÁS
-            // ====================
-            $totalPrice = round($subTotal - $discountAmount + $shippingCost, 2);
-            $cardNumberMasked = 'XXXX-XXXX-' . substr($cardNumber, -4);
-            $cvvMasked = '***';
-            
-            // ====================
-            // RENDELÉS ADATOK KÉSZÍTÉS
-            // ====================
-            $orderDataArray = [
-                'items' => $order_list,
-                'coupon' => $appliedCoupon,
-                'discount' => $discountAmount,
-                'shipping_cost' => $shippingCost,
-                'subtotal' => $subTotal
-            ];
-            
-            $orderData = json_encode($orderDataArray, JSON_UNESCAPED_UNICODE);
-
-            // ====================
-            // ADATBÁZIS MŰVELET
-            // ====================
-            $stmt = $conn->prepare("INSERT INTO orders 
-                (customer_name, customer_email, customer_address, card_type, card_number, expiry, cvv, order_data, total_price, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Not Processed', NOW())");
-            
-            if ($stmt === false) {
-                $error = "Database error. Please try again later.";
-            } else {
-                $stmt->bind_param(
-                    "ssssssssd",
-                    $name,
-                    $email,
-                    $address,
-                    $cardType,
-                    $cardNumberMasked,
-                    $expiry,
-                    $cvvMasked,
-                    $orderData,
-                    $totalPrice
-                );
-
-                if ($stmt->execute()) {
-                    $orderId = $conn->insert_id;  // Rendelés ID
-                    
-                    // ====================
-                    // EMAIL KÜLDÉS A VÁSÁRLÓNÁK
-                    // ====================
-                    try {
-                        $mail = new PHPMailer(true);
-                        
-                        // SMTP beállítások
-                        $mail->isSMTP();
-                        $mail->Host = SMTP_HOST;
-                        $mail->SMTPAuth = true;
-                        $mail->Username = SMTP_USERNAME;
-                        $mail->Password = SMTP_PASSWORD;
-                        $mail->SMTPSecure = SMTP_SECURE;
-                        $mail->Port = SMTP_PORT;
-                        
-                        
-                        // Feladó
-                        $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-                        
-                        // Címzett (vásárló)
-                        $mail->addAddress($email, $name);
-                        
-                        // Válasz cím
-                        $mail->addReplyTo(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-                        
-                        // Email formátum
-                        $mail->isHTML(true);
-                        
-                        // Email tárgy
-                        $mail->Subject = '✅ Order Confirmation - Aqua Mini Shop #' . $orderId;
-                        
-                        //AMIT A FELHASZNÁLÓ ÉS AZ ADMIN KAP
-                        $mail->Body = '
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <style>
-                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                                .container { max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
-                                .header { background: linear-gradient(135deg, #00796b 0%, #004d40 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                                .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; }
-                                .order-id { font-size: 24px; font-weight: bold; color: #00796b; margin: 20px 0; }
-                                .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                                .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-                                .table th { background-color: #f0f0f0; }
-                                .total-row { font-weight: bold; font-size: 18px; }
-                                .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <div class="header">
-                                    <h1>🎉 Thank You for Your Order!</h1>
-                                    <p>Your order has been successfully placed</p>
-                                </div>
-                                
-                                <div class="content">
-                                    <h2>Order Details</h2>
-                                    <p><strong>Order Number:</strong> <span class="order-id">#' . $orderId . '</span></p>
-                                    <p><strong>Order Date:</strong> ' . date('Y-m-d H:i:s') . '</p>
-                                    <p><strong>Customer:</strong> ' . htmlspecialchars($name) . '</p>
-                                    <p><strong>Email:</strong> ' . htmlspecialchars($email) . '</p>
-                                    <p><strong>Shipping Address:</strong> ' . nl2br(htmlspecialchars($address)) . '</p>
-                                    
-                                    <h3>Order Summary</h3>
-                                    <table class="table">
-                                        <tr>
-                                            <th>Product</th>
-                                            <th>Quantity</th>
-                                            <th>Price</th>
-                                            <th>Total</th>
-                                        </tr>';
-                        
-                        //TERMÉKEK HOZZÁADÁSA
-                        foreach ($order_list as $item) {
-                            $qty = isset($item['quantity']) ? (int)$item['quantity'] : 1;
-                            $price = isset($item['price']) ? (float)$item['price'] : 0.0;
-                            $productName = htmlspecialchars($item['name'] ?? 'Product');
-                            $total = $price * $qty;
-                            
-                            $mail->Body .= '
-                                        <tr>
-                                            <td>' . $productName . '</td>
-                                            <td>' . $qty . '</td>
-                                            <td>$' . number_format($price, 2) . '</td>
-                                            <td>$' . number_format($total, 2) . '</td>
-                                        </tr>';
-                        }
-                        
-                        //TELJES ÖSSZEG -- TOTAL
-                        $mail->Body .= '
-                                        <tr>
-                                            <td colspan="3" style="text-align: right;"><strong>Subtotal:</strong></td>
-                                            <td>$' . number_format($subTotal, 2) . '</td>
-                                        </tr>';
-                        
-                        if ($discountAmount > 0) {
-                            $mail->Body .= '
-                                        <tr>
-                                            <td colspan="3" style="text-align: right;"><strong>Discount (' . htmlspecialchars($appliedCoupon) . '):</strong></td>
-                                            <td style="color: green;">-$' . number_format($discountAmount, 2) . '</td>
-                                        </tr>';
-                        }
-                        
-                        $mail->Body .= '
-                                        <tr>
-                                            <td colspan="3" style="text-align: right;"><strong>Shipping:</strong></td>
-                                            <td>' . ($shippingCost == 0 ? 'FREE' : '$' . number_format($shippingCost, 2)) . '</td>
-                                        </tr>
-                                        <tr class="total-row">
-                                            <td colspan="3" style="text-align: right;"><strong>Total:</strong></td>
-                                            <td>$' . number_format($totalPrice, 2) . '</td>
-                                        </tr>
-                                    </table>
-                                    
-                                    <h3>Payment Information</h3>
-                                    <p><strong>Payment Method:</strong> ' . htmlspecialchars($cardType) . ' ending in ' . substr($cardNumber, -4) . '</p>
-                                    <p><strong>Status:</strong> <span style="color: #00796b; font-weight: bold;">Pending Processing</span></p>
-                                    
-                                    <h3>What Happens Next?</h3>
-                                    <ol>
-                                        <li>Your order is being prepared for shipment</li>
-                                        <li>You will receive another email with tracking information</li>
-                                        <li>Estimated delivery: 3-5 business days</li>
-                                    </ol>
-                                    
-                                    <div class="footer">
-                                        <p>If you have any questions, please contact us:</p>
-                                        <p>📧 Email: <a href="mailto:kapcsitomo2022@gmail.com">aquaminishop@gmail.com</a></p>
-                                        <p>📞 Phone: +36 70 123 4567</p>
-                                        <p>🏪 Aqua Mini Shop</p>
-                                        <p>© ' . date('Y') . ' Aqua Mini Shop. All rights reserved.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </body>
-                        </html>';
-                        
-                        //FELHASZNÁLÓNAK ÉS ADMINAK ÜZI
-                        $mail->AltBody = "THANK YOU FOR YOUR ORDER!\n\n" .
-                                        "Order Number: #" . $orderId . "\n" .
-                                        "Order Date: " . date('Y-m-d H:i:s') . "\n" .
-                                        "Customer: " . $name . "\n" .
-                                        "Email: " . $email . "\n" .
-                                        "Total Amount: $" . number_format($totalPrice, 2) . "\n\n" .
-                                        "Your order is being processed and you will receive another email with tracking information once it ships.\n\n" .
-                                        "If you have any questions, please contact us at kapcsitomo2022@gmail.com\n\n" .
-                                        "Thank you for shopping with Aqua Mini Shop!";
-                        
-                        // Email a vásárlónak
-                        $mail->send();
-                        
-                        // ====================
-                        // EMAIL KÜLDÉS NEKEM MINT ADMIN
-                        // ====================
-                        $adminMail = new PHPMailer(true);
-                        $adminMail->isSMTP();
-                        $adminMail->Host = SMTP_HOST;
-                        $adminMail->SMTPAuth = true;
-                        $adminMail->Username = SMTP_USERNAME;
-                        $adminMail->Password = SMTP_PASSWORD;
-                        $adminMail->SMTPSecure = SMTP_SECURE;
-                        $adminMail->Port = SMTP_PORT;
-                        
-                        $adminMail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-                        $adminMail->addAddress('kapcsitomo2022@gmail.com', 'Admin');  // Neked küld
-                        $adminMail->addAddress('kapcsandi.tomi@gmail.com', 'Admin');  // Másik email címedre is
-                        
-                        $adminMail->isHTML(true);
-                        $adminMail->Subject = '📦 NEW ORDER #' . $orderId . ' - Aqua Mini Shop';
-                        
-                        $itemsCount = count($order_list);
-                        
-                        $adminMail->Body = '
-                        <h2>📦 New Order Received!</h2>
-                        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeaa7;">
-                            <strong>URGENT:</strong> New order requires processing
-                        </div>
-                        
-                        <h3>Order Details</h3>
-                        <p><strong>Order ID:</strong> #' . $orderId . '</p>
-                        <p><strong>Customer:</strong> ' . htmlspecialchars($name) . '</p>
-                        <p><strong>Email:</strong> ' . htmlspecialchars($email) . '</p>
-                        <p><strong>Items:</strong> ' . $itemsCount . ' products</p>
-                        <p><strong>Total Amount:</strong> $' . number_format($totalPrice, 2) . '</p>
-                        <p><strong>Order Date:</strong> ' . date('Y-m-d H:i:s') . '</p>
-                        
-                        <h3>Products Ordered:</h3>
-                        <ul>';
-                        
-                        foreach ($order_list as $item) {
-                            $qty = isset($item['quantity']) ? (int)$item['quantity'] : 1;
-                            $price = isset($item['price']) ? (float)$item['price'] : 0.0;
-                            $productName = htmlspecialchars($item['name'] ?? 'Product');
-                            $adminMail->Body .= '<li>' . $productName . ' (x' . $qty . ') - $' . number_format($price * $qty, 2) . '</li>';
-                        }
-                        
-                        $adminMail->Body .= '
-                        </ul>
-                        
-                        <p><strong>Shipping Address:</strong><br>' . nl2br(htmlspecialchars($address)) . '</p>
-                        
-                        <p><strong>Payment Method:</strong> ' . htmlspecialchars($cardType) . '</p>
-                        <p><strong>Card Number:</strong> ' . $cardNumberMasked . '</p>';
-                        
-                        if ($appliedCoupon) {
-                            $adminMail->Body .= '<p><strong>Coupon Used:</strong> ' . htmlspecialchars($appliedCoupon) . '</p>';
-                        }
-                        
-                        $adminMail->Body .= '
-                        <br>
-                        <a href="http://localhost/aqua-mini-shop/admin/orders.php?id=' . $orderId . '" style="background: #00796b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Order in Admin Panel</a>
-                        ';
-                        
-                        $adminMail->AltBody = "NEW ORDER!\nOrder #" . $orderId . "\nCustomer: " . $name . "\nEmail: " . $email . "\nTotal: $" . number_format($totalPrice, 2) . "\nItems: " . $itemsCount;
-                        
-                        $adminMail->send();
-                        
-                        // Sikeres EMAIL
-                        error_log("✅ Emails sent successfully for order #" . $orderId . " to " . $email);
-                        
-                    } catch (Exception $e) {
-                        // Email HIBA, SIKERTLEN
-                        error_log("❌ Email sending failed: " . $e->getMessage());
-                    }
-                    
-                    //KUPONOK
-                    if ($appliedCoupon) {
-                        $couponLog = date('Y-m-d H:i:s') . " - Order #" . $orderId . " - User: $email, Coupon: $appliedCoupon, Discount: $discountAmount, Shipping: $shippingCost\n";
-                        file_put_contents('coupon_log.txt', $couponLog, FILE_APPEND);
-                    }
-                    
-                    //DELETE ORDER VAGYIS RENDELÉS TÖRLÉSE
-                    unset($_SESSION['order']);
-                    $success = true;
-                    
-                } else {
-                    $error = "Error processing your order. Please try again.";
-                }
-
-                $stmt->close();
-            }
+            $_SESSION['checkout_error'] = $result['error'];
         }
+        
+        $_SESSION['form_data'] = $_POST;
+        header("Location: checkout.php");
+        exit();
     }
 }
+
+$form_data = $_SESSION['form_data'] ?? [];
+unset($_SESSION['form_data']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -891,6 +565,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             color: var(--danger);
             border: 1px solid #ffcdd2;
         }
+        
+        .alert-message {
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            animation: slideIn 0.5s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .alert-message.success {
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            color: white;
+            border-left: 5px solid #1b5e20;
+        }
+        
+        .alert-message.error {
+            background: linear-gradient(135deg, #f44336, #c62828);
+            color: white;
+            border-left: 5px solid #b71c1c;
+        }
+        
+        .alert-message.info {
+            background: linear-gradient(135deg, #2196f3, #0d47a1);
+            color: white;
+            border-left: 5px solid #0d47a1;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -906,8 +621,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Order ID: #<?= $orderId ?>
                 </div>
                 
-                <p><strong>✅ Confirmation email has been sent to:</strong> <?= htmlspecialchars($email) ?></p>
-                <p><strong>Total Paid:</strong> $<?= isset($totalPrice) ? number_format($totalPrice, 2) : '0.00' ?></p>
+                <p><strong>✅ Confirmation email has been sent to:</strong> <?= htmlspecialchars($customerEmail) ?></p>
+                <p><strong>Total Paid:</strong> $<?= number_format($totalPrice, 2) ?></p>
                 
                 <div class="action-buttons">
                     <a href="products.php" class="btn btn-primary">Continue Shopping</a>
@@ -935,9 +650,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
 
             <!-- HIBA ÜZENET -->
-            <?php if (!empty($error)): ?>
+            <?php if (!empty($checkout_error)): ?>
                 <div class="alert alert-danger">
-                    <?= $error ?>
+                    <?= htmlspecialchars($checkout_error) ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($validation_errors)): ?>
+                <div class="alert alert-danger">
+                    <?= implode('<br>', array_map('htmlspecialchars', $validation_errors)) ?>
                 </div>
             <?php endif; ?>
 
@@ -1010,16 +731,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                    class="coupon-input" 
                                    id="couponInput" 
                                    placeholder="Enter coupon code (e.g., SUMMER10)"
-                                   value="<?= htmlspecialchars($appliedCoupon ?? '') ?>">
+                                   value="<?= htmlspecialchars($form_data['coupon'] ?? '') ?>">
                             <button type="button" class="coupon-btn" id="applyCouponBtn">Apply</button>
                         </div>
                         <div id="couponMessage" class="coupon-message"></div>
                         <p style="margin-top: 10px; font-size: 0.85em; color: var(--gray);">
-                            Available: SUMMER10 (10% off), FREESHIP (free shipping)
+                            Available: SUMMER10 (10% off), FREESHIP (free shipping), PSGKINGS (40% off)
                         </p>
                     </div>
 
-                    <!-- BIZTONSÁGI JELZŐK, DISZNEK -->
+                    <!-- BIZTONSÁGI JELZŐK -->
                     <div class="security-badges">
                         <div class="badge">🔒 256-bit SSL</div>
                         <div class="badge">✅ 30-Day Return</div>
@@ -1033,7 +754,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     
                     <form method="POST" id="checkoutForm">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
-                        <input type="hidden" name="coupon" id="couponField" value="<?= htmlspecialchars($appliedCoupon ?? '') ?>">
+                        <input type="hidden" name="coupon" id="couponField" value="<?= htmlspecialchars($form_data['coupon'] ?? '') ?>">
                         
                         <!-- NÉV -->
                         <div class="form-group">
@@ -1043,7 +764,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                    id="fullname" 
                                    name="fullname" 
                                    required
-                                   value="<?= htmlspecialchars($_POST['fullname'] ?? $_SESSION['name'] ?? '') ?>">
+                                   value="<?= htmlspecialchars($form_data['fullname'] ?? $_SESSION['name'] ?? '') ?>">
                             <div id="fullnameError" class="error-text"></div>
                         </div>
                         
@@ -1055,7 +776,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                    id="email" 
                                    name="email" 
                                    required
-                                   value="<?= htmlspecialchars($_POST['email'] ?? $_SESSION['email'] ?? '') ?>">
+                                   value="<?= htmlspecialchars($form_data['email'] ?? $_SESSION['email'] ?? '') ?>">
                             <div id="emailError" class="error-text"></div>
                         </div>
                         
@@ -1067,7 +788,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                       name="address" 
                                       rows="3" 
                                       required
-                                      placeholder="Street, City, Postal Code, Country"><?= htmlspecialchars($_POST['address'] ?? '') ?></textarea>
+                                      placeholder="Street, City, Postal Code, Country"><?= htmlspecialchars($form_data['address'] ?? '') ?></textarea>
                             <div id="addressError" class="error-text"></div>
                         </div>
                         
@@ -1081,10 +802,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <label class="form-label" for="card_type">Card Type *</label>
                             <select class="form-control" id="card_type" name="card_type" required>
                                 <option value="">Select card type</option>
-                                <option value="Visa" <?= (isset($_POST['card_type']) && $_POST['card_type'] == 'Visa') ? 'selected' : '' ?>>Visa</option>
-                                <option value="MasterCard" <?= (isset($_POST['card_type']) && $_POST['card_type'] == 'MasterCard') ? 'selected' : '' ?>>MasterCard</option>
-                                <option value="Revolut" <?= (isset($_POST['card_type']) && $_POST['card_type'] == 'Revolut') ? 'selected' : '' ?>>Revolut</option>
-                                <option value="Maestro" <?= (isset($_POST['card_type']) && $_POST['card_type'] == 'Maestro') ? 'selected' : '' ?>>Maestro</option>
+                                <option value="Visa" <?= (isset($form_data['card_type']) && $form_data['card_type'] == 'Visa') ? 'selected' : '' ?>>Visa</option>
+                                <option value="MasterCard" <?= (isset($form_data['card_type']) && $form_data['card_type'] == 'MasterCard') ? 'selected' : '' ?>>MasterCard</option>
+                                <option value="Revolut" <?= (isset($form_data['card_type']) && $form_data['card_type'] == 'Revolut') ? 'selected' : '' ?>>Revolut</option>
+                                <option value="Maestro" <?= (isset($form_data['card_type']) && $form_data['card_type'] == 'Maestro') ? 'selected' : '' ?>>Maestro</option>
                             </select>
                             <div id="cardTypeError" class="error-text"></div>
                         </div>
@@ -1099,7 +820,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                    maxlength="12"
                                    placeholder="12 digits"
                                    required
-                                   value="<?= htmlspecialchars($_POST['card_number'] ?? '') ?>">
+                                   value="<?= htmlspecialchars($form_data['card_number'] ?? '') ?>">
                             <div id="cardNumberError" class="error-text"></div>
                         </div>
                         
@@ -1114,7 +835,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                        maxlength="5"
                                        placeholder="MM/YY"
                                        required
-                                       value="<?= htmlspecialchars($_POST['expiry'] ?? '') ?>">
+                                       value="<?= htmlspecialchars($form_data['expiry'] ?? '') ?>">
                                 <div id="expiryError" class="error-text"></div>
                             </div>
                             
@@ -1127,14 +848,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                        maxlength="3"
                                        placeholder="123"
                                        required
-                                       value="<?= htmlspecialchars($_POST['cvv'] ?? '') ?>">
+                                       value="<?= htmlspecialchars($form_data['cvv'] ?? '') ?>">
                                 <div id="cvvError" class="error-text"></div>
                             </div>
                         </div>
                         
                         <!-- FELTÉTELEK -->
                         <div class="terms-check">
-                            <input type="checkbox" id="terms" name="terms" required <?= (isset($_POST['terms']) && $_POST['terms'] == 'on') ? 'checked' : '' ?>>
+                            <input type="checkbox" id="terms" name="terms" required <?= (isset($form_data['terms']) && $form_data['terms'] == 'on') ? 'checked' : '' ?>>
                             <label class="terms-label" for="terms">
                                 I agree to the <a href="terms.php" target="_blank">Terms & Conditions</a> 
                                 and <a href="privacy.php" target="_blank">Privacy Policy</a>. *
@@ -1179,14 +900,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         const freeShippingOver = <?= json_encode($freeShippingOver) ?>;
         const shippingFlat = <?= json_encode($shippingFlat) ?>;
         
-        // KUPONOK, ITT IS HOZZÁ LEHET ADNI
+        // KUPONOK
         const validCoupons = {
             'SUMMER10': { type: 'percent', value: 0.10 },
             'FREESHIP': { type: 'shipping', value: 0 },
             'PSGKINGS': { type: 'percent', value: 0.40 }
         };
         
-        // ELEMEK, A VALIDÁSLÁSHOZ
+        // ELEMEK
         const couponInput = document.getElementById('couponInput');
         const applyCouponBtn = document.getElementById('applyCouponBtn');
         const couponField = document.getElementById('couponField');
@@ -1215,7 +936,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
         
-        //HIBAMEZŐŐŐK
         function clearError(fieldId) {
             const errorElement = document.getElementById(fieldId + 'Error');
             const field = document.getElementById(fieldId);
@@ -1231,7 +951,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
             }
         }
-        //CUPON ÜZENET, SIKERES VAGY SEM
+        
         function showCouponMessage(message, isSuccess) {
             if (couponMessage) {
                 couponMessage.textContent = message;
@@ -1248,21 +968,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         function updateTotals() {
             const total = subtotal - discount + shipping;
             
-            // Shipping megjelenítés
             if (shipping === 0) {
                 shippingDisplay.innerHTML = '<span style="color: #4caf50;">FREE</span>';
             } else {
                 shippingDisplay.textContent = '$' + shipping.toFixed(2);
             }
             
-            //LEÁRAZÁS, AKCIO MEGJELENÉSE HA SIKER
             discountDisplay.textContent = '-$' + discount.toFixed(2);
             discountDisplay.style.color = discount > 0 ? '#4caf50' : '#6c7a89';
             
-            //TELJES VAGYIS TOTAL AR
             totalDisplay.textContent = '$' + total.toFixed(2);
             
-            //PAY GOMB SZOVEGE
             if (payBtn) {
                 payBtn.innerHTML = `<span>Pay $${total.toFixed(2)}</span><span>→</span>`;
             }
@@ -1279,14 +995,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
                 
                 if (!validCoupons[code]) {
-                    showCouponMessage('Invalid coupon code. Available codes: SUMMER10, FREESHIP', false);
+                    showCouponMessage('Invalid coupon code. Available codes: SUMMER10, FREESHIP, PSGKINGS', false);
                     return;
                 }
                 
-                //KUPON ELMENTESE EGY VALTOZOBAN
                 couponField.value = code;
-                
-                // Kupon alkalmazása
                 const coupon = validCoupons[code];
                 
                 if (coupon.type === 'percent') {
@@ -1297,10 +1010,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     shipping = 0;
                 }
                 
-                // Összegek frissítése
                 updateTotals();
-                
-                // Sikeres üzenet
                 showCouponMessage(`Coupon "${code}" applied successfully!`, true);
             });
         }
@@ -1314,7 +1024,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             });
         }
         
-        //EXPIRY VAGY LEJARAS VALIDALSA
         const expiryInput = document.getElementById('expiry');
         if (expiryInput) {
             expiryInput.addEventListener('input', function() {
@@ -1328,7 +1037,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             });
         }
         
-        //CVC VALIDÁLÁSA
         const cvvInput = document.getElementById('cvv');
         if (cvvInput) {
             cvvInput.addEventListener('input', function() {
@@ -1357,10 +1065,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                // Minden hiba törlése
                 ['fullname', 'email', 'address', 'card_type', 'card_number', 'expiry', 'cvv', 'terms'].forEach(clearError);
                 
-                // Validáció
                 const fullname = document.getElementById('fullname').value.trim();
                 const email = document.getElementById('email').value.trim();
                 const address = document.getElementById('address').value.trim();
@@ -1416,7 +1122,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
                 
                 if (hasError) {
-                    //HIBAHOZ visszagoregetes
                     const firstError = document.querySelector('.input-error');
                     if (firstError) {
                         firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1424,11 +1129,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     return false;
                 }
                 
-                //HA MINDEN KIRALY AKKOR EL KELL INDITANI
                 processingOverlay.style.display = 'flex';
                 payBtn.disabled = true;
                 
-                //KÉSLELETETÉS HOGY NE LEGYEN TURTELVE
                 setTimeout(() => {
                     form.submit();
                 }, 1500);
@@ -1437,11 +1140,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             });
         }
         
-        // INICIALIZÁLÁS!!!!!
+        // INICIALIZÁLÁS
         document.addEventListener('DOMContentLoaded', function() {
             updateTotals();
             
-            //KUPON MUTATASA HA VAN!!!
             const appliedCoupon = couponField.value;
             if (appliedCoupon) {
                 couponInput.value = appliedCoupon;
