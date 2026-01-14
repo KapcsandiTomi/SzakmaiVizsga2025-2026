@@ -1,234 +1,7 @@
 <?php
-session_start();
-require_once 'config.php';
-
-// ====================
-// JOGOSULTSÁG ELLENŐRZÉS
-// ====================
-if (!isset($_SESSION['user_id'])) {
-    header("Location: index.php");
-    exit();
-}
-
-// ====================
-// VÁLTOZÓK
-// ====================
-$error = '';
-$order = null;
-
-// ====================
-// RENDELÉS BETÖLTÉSE
-// ====================
-if (isset($_GET['id']) && is_numeric($_GET['id'])) {
-    $order_id = intval($_GET['id']);
-    $user_email = $_SESSION['email'];
-    
-    $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ? AND customer_email = ?");
-    $stmt->bind_param("is", $order_id, $user_email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        $order = $result->fetch_assoc();
-    } else {
-        $error = "Order not found or you don't have permission to view this order!";
-    }
-    $stmt->close();
-} else {
-    $error = "No order ID specified!";
-}
-
-// ====================
-// ÁLLAPOT SZÍNEK
-// ====================
-$statusColors = [
-    "Not Processed" => "#ff4d4d",
-    "Processed" => "#ffa500", 
-    "Handed to Courier" => "#1e90ff",
-    "On the Way" => "#ffff66",
-    "Delivered" => "#32cd32",
-    "PC Configuration Ordered" => "#9370db"
-];
-
-// ====================
-// ÁLLAPOT LEÍRÁSOK
-// ====================
-$statusDescriptions = [
-    "Not Processed" => "Your order has been received and is waiting to be processed.",
-    "Processed" => "Your order has been processed and is being prepared for shipment.",
-    "Handed to Courier" => "Your order has been handed over to the courier service.",
-    "On the Way" => "Your order is on the way to your address.",
-    "Delivered" => "Your order has been delivered successfully.",
-    "PC Configuration Ordered" => "Your PC configuration has been ordered and is being assembled." 
-];
-// ====================
-// ÁLLAPOT ICONOK
-// ====================
-$statusIcons = [
-    "Not Processed" => "fas fa-clock",
-    "Processed" => "fas fa-cogs",
-    "Handed to Courier" => "fas fa-handshake",
-    "On the Way" => "fas fa-truck",
-    "Delivered" => "fas fa-check-circle",
-    "PC Configuration Ordered" => "fas fa-desktop" 
-];
-
-// ====================
-// HELPER FUNKCIÓK
-// ====================
-function parseOrderData($orderDataJson, $totalPrice) {
-    if (empty($orderDataJson) || trim($orderDataJson) === '') {
-        return [
-            'items' => [],
-            'coupon' => null,
-            'discount' => 0,
-            'shipping' => 0,
-            'subtotal' => $totalPrice
-        ];
-    }
-    
-    $data = json_decode($orderDataJson, true);
-    
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $cleanJson = trim($orderDataJson);
-        $cleanJson = str_replace(["\r", "\n", "\t"], '', $cleanJson);
-        $cleanJson = preg_replace('/\s+/', ' ', $cleanJson);
-        
-        if (strpos($cleanJson, "'") !== false) {
-            $cleanJson = str_replace("'", '"', $cleanJson);
-        }
-        
-        if (strpos($cleanJson, '[') === 0 && strpos($cleanJson, ']') !== false) {
-            $cleanJson = '{"items": ' . $cleanJson . '}';
-        }
-        
-        $data = json_decode($cleanJson, true);
-    }
-    
-    if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
-        error_log("JSON decode error: " . json_last_error_msg() . " - Data: " . $orderDataJson);
-        return [
-            'items' => [],
-            'coupon' => null,
-            'discount' => 0,
-            'shipping' => 0,
-            'subtotal' => $totalPrice
-        ];
-    }
-    
-    if (isset($data['items']) && is_array($data['items'])) {
-        return [
-            'items' => $data['items'],
-            'coupon' => $data['coupon'] ?? null,
-            'discount' => $data['discount'] ?? 0,
-            'shipping' => $data['shipping_cost'] ?? $data['shipping'] ?? 0,
-            'subtotal' => $data['subtotal'] ?? $totalPrice
-        ];
-    } 
-    elseif (is_array($data) && !empty($data)) {
-        $firstItem = reset($data);
-        if (isset($firstItem['name']) || isset($firstItem['product_name']) || isset($firstItem['title'])) {
-            return [
-                'items' => $data,
-                'coupon' => null,
-                'discount' => 0,
-                'shipping' => 0,
-                'subtotal' => $totalPrice
-            ];
-        }
-    }
-    
-    return [
-        'items' => [],
-        'coupon' => null,
-        'discount' => 0,
-        'shipping' => 0,
-        'subtotal' => $totalPrice
-    ];
-}
-
-function displayProduct($item) {
-    $html = '<div class="track-product-item">';
-    
-    $image = '';
-    
-    if (isset($item['image']) && !empty($item['image'])) {
-        $image = $item['image'];
-    } elseif (isset($item['product_image']) && !empty($item['product_image'])) {
-        $image = $item['product_image'];
-    } elseif (isset($item['img']) && !empty($item['img'])) {
-        $image = $item['img'];
-    }
-    
-    if (!empty($image)) {
-        if (strpos($image, '../') !== 0 && strpos($image, 'http') !== 0 && strpos($image, 'https') !== 0) {
-            $image = '../' . $image;
-        }
-        
-        $html .= '<img src="' . htmlspecialchars($image) . '" alt="Product" class="track-product-image" onerror="this.onerror=null; this.src=\'../letoles.jpg\';">';
-    } else {
-        $defaultImage = '../letoles.jpg';
-        if (file_exists($defaultImage)) {
-            $html .= '<img src="' . $defaultImage . '" alt="Default Product" class="track-product-image">';
-        } else {
-            $html .= '<div class="track-product-image-placeholder">
-                        <i class="fas fa-image"></i>
-                      </div>';
-        }
-    }
-    
-    $productName = '';
-    if (isset($item['name']) && !empty($item['name'])) {
-        $productName = $item['name'];
-    } elseif (isset($item['product_name']) && !empty($item['product_name'])) {
-        $productName = $item['product_name'];
-    } elseif (isset($item['title']) && !empty($item['title'])) {
-        $productName = $item['title'];
-    } else {
-        $productName = 'Product';
-    }
-    
-    $quantity = isset($item['quantity']) ? intval($item['quantity']) : (isset($item['qty']) ? intval($item['qty']) : 1);
-    
-    $price = 0;
-    if (isset($item['price']) && is_numeric($item['price'])) {
-        $price = floatval($item['price']);
-    } elseif (isset($item['product_price']) && is_numeric($item['product_price'])) {
-        $price = floatval($item['product_price']);
-    } elseif (isset($item['unit_price']) && is_numeric($item['unit_price'])) {
-        $price = floatval($item['unit_price']);
-    }
-    
-    $total = $price * $quantity;
-    
-    $html .= '<div class="track-product-details">';
-    $html .= '<span class="track-product-name">' . htmlspecialchars($productName) . '</span>';
-    
-    if (isset($item['size']) || isset($item['color']) || isset($item['variant'])) {
-        $html .= '<div class="track-product-info">';
-        if (isset($item['size'])) {
-            $html .= '<span class="me-2">Size: ' . htmlspecialchars($item['size']) . '</span>';
-        }
-        if (isset($item['color'])) {
-            $html .= '<span class="me-2">Color: ' . htmlspecialchars($item['color']) . '</span>';
-        }
-        if (isset($item['variant'])) {
-            $html .= '<span>Variant: ' . htmlspecialchars($item['variant']) . '</span>';
-        }
-        $html .= '</div>';
-    }
-    
-    $html .= '<div class="track-product-meta">';
-    $html .= '<span class="track-product-price">$' . number_format($price, 2) . ' each</span>';
-    $html .= '<span class="track-product-quantity">× ' . $quantity . '</span>';
-    $html .= '</div>';
-    $html .= '<span class="track-product-total">$' . number_format($total, 2) . ' total</span>';
-    $html .= '</div>';
-    $html .= '</div>';
-    
-    return $html;
-}
+require_once 'handler/trackhandler.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -704,10 +477,6 @@ function displayProduct($item) {
             margin-top: 5px;
         }
         
-        .dynamic-step {
-            min-width: 80px;
-        }
-        
         @media (max-width: 768px) {
             .track-container {
                 padding: 0 15px;
@@ -768,10 +537,10 @@ function displayProduct($item) {
 </div>
 
 <div class="track-container">
-    <?php if (!empty($error)): ?>
+    <?php if (!empty($data['error'])): ?>
         <div class="alert-container">
             <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error); ?>
+                <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($data['error']); ?>
                 <br>
                 <a href="myorder.php" class="btn btn-sm btn-primary mt-3">
                     <i class="fas fa-arrow-left"></i> Back to My Orders
@@ -780,28 +549,14 @@ function displayProduct($item) {
         </div>
     <?php endif; ?>
     
-    <?php if ($order && empty($error)): 
-        $orderInfo = parseOrderData($order['order_data'], $order['total_price']);
-        $items = $orderInfo['items'];
-        $coupon = $orderInfo['coupon'];
-        $discount = $orderInfo['discount'];
-        $shipping = $orderInfo['shipping'];
+    <?php if ($data['trackingData'] && empty($data['error'])): 
+        $order = $data['trackingData']['order'];
+        $statusInfo = $data['trackingData']['status_info'];
+        $progress = $data['trackingData']['progress'];
         $currentStatus = $order['status'] ?? 'Not Processed';
-        $statusColor = $statusColors[$currentStatus] ?? $statusColors['Not Processed'];
-        $statusIcon = $statusIcons[$currentStatus] ?? $statusIcons['Not Processed'];
-        $statusDescription = $statusDescriptions[$currentStatus] ?? 'Your order status is being updated.';
-        
-        $statusSteps = ["Not Processed", "Processed", "Handed to Courier", "On the Way", "Delivered"];
-        
-        if (!in_array($currentStatus, $statusSteps)) {
-            $statusSteps[] = $currentStatus;
-        }
-        
+        $statusColor = $statusInfo['colors'][$currentStatus] ?? '#ffffff';
+        $statusSteps = $statusInfo['steps'];
         $currentStepIndex = array_search($currentStatus, $statusSteps);
-        $progressPercentage = $currentStepIndex !== false ? ($currentStepIndex + 1) / count($statusSteps) * 100 : 20;
-        
-        $card_number = $order['card_number'] ?? '';
-        $masked_card = !empty($card_number) ? 'XXXX-XXXX-XXXX-' . substr($card_number, -4) : 'N/A';
     ?>
     
     <div class="track-card">
@@ -816,7 +571,7 @@ function displayProduct($item) {
         
         <div class="tracking-progress">
             <div class="progress-bar">
-                <div class="progress-fill" style="width: <?php echo $progressPercentage; ?>%"></div>
+                <div class="progress-fill" style="width: <?php echo $progress; ?>%"></div>
             </div>
             
             <div class="status-steps">
@@ -824,13 +579,10 @@ function displayProduct($item) {
                     $isActive = ($step === $currentStatus);
                     $isCompleted = ($currentStepIndex !== false && $index <= $currentStepIndex);
                     $stepClass = $isActive ? 'step-active' : ($isCompleted ? 'step-completed' : '');
-                    
-                    $stepIcon = $statusIcons[$step] ?? $statusIcons['Not Processed'];
-                    $stepColor = $statusColors[$step] ?? $statusColors['Not Processed'];
                 ?>
-                <div class="status-step <?php echo $stepClass; ?> dynamic-step">
-                    <div class="step-icon" style="<?php echo $isCompleted ? 'background:' . $stepColor : ''; ?>">
-                        <i class="<?php echo $stepIcon; ?>"></i>
+                <div class="status-step <?php echo $stepClass; ?>">
+                    <div class="step-icon" style="<?php echo $isCompleted ? 'background:' . $statusInfo['colors'][$step] : ''; ?>">
+                        <i class="<?php echo $statusInfo['icons'][$step]; ?>"></i>
                     </div>
                     <div class="step-label"><?php echo $step; ?></div>
                     <?php if ($isActive || $isCompleted): ?>
@@ -849,11 +601,11 @@ function displayProduct($item) {
             <div class="current-status-card">
                 <div class="current-status">
                     <div class="status-icon" style="background: <?php echo $statusColor; ?>;">
-                        <i class="<?php echo $statusIcon; ?>"></i>
+                        <i class="<?php echo $statusInfo['icons'][$currentStatus]; ?>"></i>
                     </div>
                     <div class="status-text">
                         <div class="status-name"><?php echo $currentStatus; ?></div>
-                        <div class="status-description"><?php echo $statusDescription; ?></div>
+                        <div class="status-description"><?php echo $statusInfo['descriptions'][$currentStatus]; ?></div>
                     </div>
                 </div>
                 <div class="order-date mt-3">
@@ -881,7 +633,7 @@ function displayProduct($item) {
                     <strong>Payment Method:</strong><br>
                     <?php echo htmlspecialchars($order['card_type'] ?? 'Credit Card'); ?><br>
                     <strong>Card Number:</strong> 
-                    <span class="card-masked"><?php echo $masked_card; ?></span><br>
+                    <span class="card-masked"><?php echo $data['maskedCard']; ?></span><br>
                     <strong>Expiry:</strong> <?php echo htmlspecialchars($order['expiry'] ?? 'N/A'); ?><br>
                     <strong>Status:</strong> 
                     <span style="color: var(--success); font-weight: 600;">Paid</span><br>
@@ -893,10 +645,10 @@ function displayProduct($item) {
         
         <div class="products-section">
             <h3 class="section-title"><i class="fas fa-shopping-bag"></i> Order Items</h3>
-            <?php if (is_array($items) && count($items) > 0): ?>
+            <?php if (is_array($data['orderInfo']['items']) && count($data['orderInfo']['items']) > 0): ?>
                 <div class="track-products-list">
-                    <?php foreach($items as $index => $item): ?>
-                        <?php echo displayProduct($item); ?>
+                    <?php foreach($data['orderInfo']['items'] as $index => $item): ?>
+                        <?php echo $handler->displayProduct($item); ?>
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
@@ -911,21 +663,21 @@ function displayProduct($item) {
         
         <div class="price-summary">
             <h3 class="section-title"><i class="fas fa-receipt"></i> Price Summary</h3>
-            <?php if (is_array($items) && count($items) > 0): ?>
+            <?php if (is_array($data['orderInfo']['items']) && count($data['orderInfo']['items']) > 0): ?>
                 <div class="price-row">
                     <span>Subtotal:</span>
-                    <span>$<?php echo number_format($orderInfo['subtotal'], 2); ?></span>
+                    <span>$<?php echo number_format($data['orderInfo']['subtotal'], 2); ?></span>
                 </div>
-                <?php if ($discount > 0): ?>
+                <?php if ($data['orderInfo']['discount'] > 0): ?>
                     <div class="price-row">
-                        <span class="discount-text">Discount <?php echo $coupon ? "($coupon)" : ""; ?>:</span>
-                        <span class="discount-text">-$<?php echo number_format($discount, 2); ?></span>
+                        <span class="discount-text">Discount <?php echo $data['orderInfo']['coupon'] ? "(" . htmlspecialchars($data['orderInfo']['coupon']) . ")" : ""; ?>:</span>
+                        <span class="discount-text">-$<?php echo number_format($data['orderInfo']['discount'], 2); ?></span>
                     </div>
                 <?php endif; ?>
-                <?php if ($shipping > 0): ?>
+                <?php if ($data['orderInfo']['shipping'] > 0): ?>
                     <div class="price-row">
                         <span>Shipping:</span>
-                        <span>$<?php echo number_format($shipping, 2); ?></span>
+                        <span>$<?php echo number_format($data['orderInfo']['shipping'], 2); ?></span>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>
