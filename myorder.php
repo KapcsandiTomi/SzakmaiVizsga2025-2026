@@ -1,69 +1,5 @@
 <?php
-session_start();
-require_once 'config.php';
-
-// ====================
-// BEJELENTKEZÉS ELLENŐRZÉS
-// ====================
-if (!isset($_SESSION['email'])) {
-    header("Location: index.php");
-    exit();
-}
-
-// ====================
-// ADATBÁZISBÓL RENDELÉSEK BETÖLTÉSE
-// ====================
-$user_email = $_SESSION['email'];
-$db_orders = [];
-
-if ($user_email) {
-    $stmt = $conn->prepare("SELECT id, total_price, status, created_at, customer_name FROM orders WHERE customer_email = ? ORDER BY created_at DESC");
-    $stmt->bind_param("s", $user_email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    while ($order = $result->fetch_assoc()) {
-        $db_orders[] = $order;
-    }
-    $stmt->close();
-}
-
-// ====================
-// SESSION KOSÁR FELDOLGOZÁSA
-// ====================
-$order_list = $_SESSION['order'] ?? [];
-$totalPrice = 0;
-foreach ($order_list as $order) {
-    $totalPrice += $order['price'];
-}
-
-// ====================
-// KOSÁR KIÜRÍTÉS
-// ====================
-if (isset($_POST['clear_order'])) {
-    unset($_SESSION['order']);
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit();
-}
-
-// ====================
-// ÁLLAPOT SZÍNEK ÉS IKONOK
-// ====================
-$statusColors = [
-    "Not Processed" => "#ff6b6b",
-    "Processed" => "#4ecdc4", 
-    "Handed to Courier" => "#45b7d1",
-    "On the Way" => "#96ceb4",
-    "Delivered" => "#95e1d3"
-];
-
-$statusIcons = [
-    "Not Processed" => "fas fa-hourglass-half",
-    "Processed" => "fas fa-cogs",
-    "Handed to Courier" => "fas fa-handshake",
-    "On the Way" => "fas fa-shipping-fast",
-    "Delivered" => "fas fa-check-circle"
-];
+require_once 'handler/orderhandler.php';
 ?>
 
 <!DOCTYPE html>
@@ -108,7 +44,7 @@ $statusIcons = [
             margin: 0 auto;
             padding: 30px 20px;
         }
-    
+        
         .hero-header {
             text-align: center;
             margin-bottom: 40px;
@@ -134,7 +70,6 @@ $statusIcons = [
             margin-top: 15px;
         }
         
-      
         .dashboard-layout {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -142,7 +77,6 @@ $statusIcons = [
             margin-bottom: 40px;
         }
         
-
         .dashboard-cards {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -218,7 +152,6 @@ $statusIcons = [
             line-height: 1.4;
         }
         
- 
         .cart-section {
             background: white;
             border-radius: 25px;
@@ -380,7 +313,6 @@ $statusIcons = [
             box-shadow: 0 5px 15px rgba(0, 180, 216, 0.3);
         }
         
-
         .orders-main-section {
             background: white;
             border-radius: 25px;
@@ -509,7 +441,6 @@ $statusIcons = [
             color: white;
         }
         
-        
         .order-details-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -546,7 +477,6 @@ $statusIcons = [
             font-weight: 900;
             color: var(--aqua-primary);
         }
-        
         
         .order-progress-horizontal {
             margin: 20px 0;
@@ -615,7 +545,6 @@ $statusIcons = [
             color: var(--aqua-primary);
         }
         
-       
         .empty-state-compact {
             text-align: center;
             padding: 50px 30px;
@@ -667,7 +596,6 @@ $statusIcons = [
             color: white;
         }
         
-        
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
@@ -677,7 +605,6 @@ $statusIcons = [
             animation: float 3s ease-in-out infinite;
         }
         
-       
         @media (max-width: 1200px) {
             .dashboard-layout {
                 grid-template-columns: 1fr;
@@ -736,7 +663,6 @@ $statusIcons = [
             }
         }
         
-      
         .cart-items-compact::-webkit-scrollbar {
             width: 6px;
         }
@@ -758,9 +684,6 @@ $statusIcons = [
 </head>
 <body>
 
-<!-- ==================== -->
-<!-- NAVBAR
-<!-- ==================== -->
 <div class="container-fluid bg-light p-0">
     <div class="row gx-0 d-none d-lg-flex">
       <div class="col-lg-7 px-5 text-start">
@@ -827,22 +750,16 @@ $statusIcons = [
     </div>
   </nav>
 
-<!-- ==================== -->
-<!-- FŐ -->
-<!-- ==================== -->
 <div class="main-container">
     
-    <!-- HERO -->
     <div class="hero-header">
         <h1 class="aqua-title">My Orders</h1>
         <p class="text-muted fs-5">Manage your purchases and track orders in real-time</p>
         <div class="wave-decoration"></div>
     </div>
     
-    <!-- KÉT OSZLOP -->
     <div class="dashboard-layout">
         
-        <!-- BAL OLDAL -->
         <div class="orders-main-section">
             
             <div class="dashboard-cards">
@@ -851,7 +768,7 @@ $statusIcons = [
                         <i class="fas fa-shopping-cart"></i>
                     </div>
                     <div class="card-title">Current Cart</div>
-                    <div class="card-value"><?php echo count($order_list); ?></div>
+                    <div class="card-value"><?php echo $data['cart_count']; ?></div>
                     <div class="card-subtext">Items waiting for checkout</div>
                 </div>
                 
@@ -860,7 +777,7 @@ $statusIcons = [
                         <i class="fas fa-box-open"></i>
                     </div>
                     <div class="card-title">Total Orders</div>
-                    <div class="card-value"><?php echo count($db_orders); ?></div>
+                    <div class="card-value"><?php echo $data['orders_count']; ?></div>
                     <div class="card-subtext">All-time completed orders</div>
                 </div>
                 
@@ -869,12 +786,11 @@ $statusIcons = [
                         <i class="fas fa-dollar-sign"></i>
                     </div>
                     <div class="card-title">Cart Total</div>
-                    <div class="card-value">$<?php echo number_format($totalPrice, 2); ?></div>
+                    <div class="card-value">$<?php echo number_format($data['cart_total'], 2); ?></div>
                     <div class="card-subtext">Current cart value</div>
                 </div>
             </div>
             
-            <!-- RENDELÉS HISTORY -->
             <div class="orders-header">
                 <div class="orders-title">
                     <i class="fas fa-history"></i>
@@ -882,11 +798,11 @@ $statusIcons = [
                 </div>
                 <div class="orders-count">
                     <i class="fas fa-list-ol"></i>
-                    <?php echo count($db_orders); ?> Orders
+                    <?php echo $data['orders_count']; ?> Orders
                 </div>
             </div>
             
-            <?php if (empty($db_orders)): ?>
+            <?php if (empty($data['orders'])): ?>
                 <div class="empty-state-compact">
                     <div class="empty-icon-compact animate-float">
                         <i class="fas fa-box-open"></i>
@@ -898,25 +814,11 @@ $statusIcons = [
                     </a>
                 </div>
             <?php else: ?>
-                <!-- RENDELÉS KÁRTYÁK -->
                 <div class="orders-horizontal-grid">
-                    <?php foreach ($db_orders as $index => $order): 
-                        $status = $order['status'] ?? 'Not Processed';
-                        $statusColor = $statusColors[$status] ?? '#667eea';
-                        $statusIcon = $statusIcons[$status] ?? 'fas fa-question';
-                        $orderDate = strtotime($order['created_at']);
-                        $currentDate = time();
-                        $daysDiff = floor(($currentDate - $orderDate) / (60 * 60 * 24));
-                        
-                        //PROGRESS ALALPOT HALADASA
-                        $progress = 0;
-                        switch($status) {
-                            case 'Not Processed': $progress = 20; break;
-                            case 'Processed': $progress = 40; break;
-                            case 'Handed to Courier': $progress = 60; break;
-                            case 'On the Way': $progress = 80; break;
-                            case 'Delivered': $progress = 100; break;
-                        }
+                    <?php foreach ($data['orders'] as $index => $order): 
+                        $statusInfo = $handler->getOrderStatusInfo($order['status']);
+                        $progress = $handler->calculateProgress($order['status']);
+                        $daysAgo = $handler->getDaysAgo($order['created_at']);
                     ?>
                         <div class="order-card-horizontal">
                             <div class="order-header-horizontal">
@@ -924,13 +826,12 @@ $statusIcons = [
                                     <i class="fas fa-hashtag"></i>
                                     #<?php echo htmlspecialchars($order['id']); ?>
                                 </div>
-                                <div class="order-status-horizontal" style="background: <?php echo $statusColor; ?>;">
-                                    <i class="<?php echo $statusIcon; ?>"></i>
-                                    <?php echo htmlspecialchars($status); ?>
+                                <div class="order-status-horizontal" style="background: <?php echo $statusInfo['color']; ?>;">
+                                    <i class="<?php echo $statusInfo['icon']; ?>"></i>
+                                    <?php echo htmlspecialchars($order['status']); ?>
                                 </div>
                             </div>
                             
-                            <!-- RENDELÉS  -->
                             <div class="order-details-grid">
                                 <div class="detail-item-horizontal">
                                     <span class="detail-label-horizontal">Customer</span>
@@ -938,11 +839,11 @@ $statusIcons = [
                                 </div>
                                 <div class="detail-item-horizontal">
                                     <span class="detail-label-horizontal">Order Date</span>
-                                    <span class="detail-value-horizontal"><?php echo date('M d, Y', $orderDate); ?></span>
+                                    <span class="detail-value-horizontal"><?php echo date('M d, Y', strtotime($order['created_at'])); ?></span>
                                 </div>
                                 <div class="detail-item-horizontal">
                                     <span class="detail-label-horizontal">Order Time</span>
-                                    <span class="detail-value-horizontal"><?php echo date('H:i', $orderDate); ?></span>
+                                    <span class="detail-value-horizontal"><?php echo date('H:i', strtotime($order['created_at'])); ?></span>
                                 </div>
                                 <div class="detail-item-horizontal">
                                     <span class="detail-label-horizontal">Total Amount</span>
@@ -950,7 +851,6 @@ $statusIcons = [
                                 </div>
                             </div>
                             
-                            <!-- PROGRESS RESZ -->
                             <div class="order-progress-horizontal">
                                 <div class="progress-label-horizontal">
                                     <span>Order Progress</span>
@@ -961,11 +861,10 @@ $statusIcons = [
                                 </div>
                             </div>
                             
-                            <!-- FOOTER GOMBOKKAL -->
                             <div class="order-footer-horizontal">
                                 <div class="days-ago-horizontal">
                                     <i class="far fa-clock"></i>
-                                    <?php echo $daysDiff == 0 ? 'Today' : ($daysDiff == 1 ? 'Yesterday' : $daysDiff . ' days ago'); ?>
+                                    <?php echo $daysAgo; ?>
                                 </div>
                                 <a href="track.php?id=<?php echo $order['id']; ?>" class="track-btn-horizontal">
                                     <i class="fas fa-map-marker-alt"></i>
@@ -978,14 +877,13 @@ $statusIcons = [
             <?php endif; ?>
         </div>
         
-        <!-- JOBB OLDALI SZEKCIÓ -->
         <div class="cart-section">
             <div class="section-title-aqua">
                 <i class="fas fa-shopping-basket"></i>
                 <h2>Your Shopping Cart</h2>
             </div>
             
-            <?php if (empty($order_list)): ?>
+            <?php if (empty($data['cart'])): ?>
                 <div class="empty-state-compact">
                     <div class="empty-icon-compact animate-float">
                         <i class="fas fa-shopping-basket"></i>
@@ -997,9 +895,8 @@ $statusIcons = [
                     </a>
                 </div>
             <?php else: ?>
-                <!-- KOSÁR ITEMS SCROLLBAR-RAL -->
                 <div class="cart-items-compact">
-                    <?php foreach ($order_list as $index => $order): ?>
+                    <?php foreach ($data['cart'] as $index => $order): ?>
                         <div class="cart-item-compact">
                             <img src="<?= htmlspecialchars($order['image']) ?>" 
                                  alt="<?= htmlspecialchars($order['name']) ?>" 
@@ -1020,14 +917,12 @@ $statusIcons = [
                     <?php endforeach; ?>
                 </div>
                 
-                <!-- KOSÁR ÖSSZESÍTŐ -->
                 <div class="cart-total-compact">
                     <div class="total-display-compact">
                         <div class="total-label-compact">Total Amount</div>
-                        <div class="total-amount-compact">$<?= number_format($totalPrice, 2) ?></div>
+                        <div class="total-amount-compact">$<?= number_format($data['cart_total'], 2) ?></div>
                     </div>
                     
-                    <!-- GOMBOK -->
                     <div class="cart-actions-compact">
                         <form method="post" style="flex: 1;">
                             <button type="submit" name="clear_order" class="btn-compact btn-danger-compact">
@@ -1044,9 +939,6 @@ $statusIcons = [
     </div>
 </div>
 
-<!-- ==================== -->
-<!-- FOOTER --->
-<!-- ==================== -->
 <br>
 <footer>
   <div class="container">
@@ -1079,13 +971,7 @@ $statusIcons = [
   </div>
 </footer>
 
-<!-- ==================== -->
-<!-- JAVASCRIPT -->
-<!-- ==================== -->
 <script>
-// ====================
-// KÉPHIBA KEZELÉSE
-// ====================
 document.querySelectorAll('img').forEach(img => {
     img.addEventListener('error', function() {
         this.src = 'letoles.jpg';
@@ -1094,11 +980,7 @@ document.querySelectorAll('img').forEach(img => {
     });
 });
 
-// ====================
-// OLDAL BETÖLTÉSE
-// ====================
 document.addEventListener('DOMContentLoaded', function() {
-    // PROGRESS BAR ANIMÁCIÓ
     const progressBars = document.querySelectorAll('.progress-fill-horizontal');
     progressBars.forEach(bar => {
         const width = bar.style.width;
@@ -1108,7 +990,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
     
-    // KÁRTYA EFFEKTEK
     const cards = document.querySelectorAll('.dashboard-card, .cart-item-compact, .order-card-horizontal');
     cards.forEach(card => {
         card.addEventListener('mouseenter', function() {
@@ -1120,7 +1001,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    //TRACK BUTTON
     const trackButtons = document.querySelectorAll('.track-btn-horizontal');
     trackButtons.forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -1131,7 +1011,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    //KÁRTYA ANIMATION
     const orderCards = document.querySelectorAll('.order-card-horizontal');
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -1151,7 +1030,6 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(item);
     });
     
-    // DASHBOARD KÁRTYÁK ANIMÁCIÓ
     const dashboardCards = document.querySelectorAll('.dashboard-card');
     dashboardCards.forEach((card, index) => {
         card.style.opacity = '0';
@@ -1164,7 +1042,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     });
     
-    // HULLÁM ANIMÁCIÓ
     const wave = document.querySelector('.wave-decoration');
     if (wave) {
         let position = 0;
@@ -1176,7 +1053,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(animateWave, 1000);
     }
 });
-
 
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
