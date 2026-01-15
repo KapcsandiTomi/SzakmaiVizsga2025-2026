@@ -1,66 +1,91 @@
 <?php
+
 class RateData {
-    private $conn;
-    
-    public function __construct($database_connection) {
+    private PDO $conn;
+
+    public function __construct(PDO $database_connection) {
         $this->conn = $database_connection;
     }
-    
-    public function getReviewTitle() {
+
+    public function getReviewTitle(): string {
         return "How was your shopping here?";
     }
-    
-    public function getPageTitle() {
+
+    public function getPageTitle(): string {
         return "Aqua Mini Shop - Shopping Experience Review";
     }
-    
-    public function saveReview($user_name, $rating, $comment) {
-        $review_title = $this->getReviewTitle();
-        $user_name = $this->conn->real_escape_string($user_name);
-        $comment = $this->conn->real_escape_string($comment);
-        
-        $sql = "INSERT INTO reviews (product_name, user_name, rating, comment) 
-                VALUES ('$review_title', '$user_name', $rating, '$comment')";
-        
-        return $this->conn->query($sql);
+
+    // ====================
+    // ÉRTÉKELÉS MENTÉSE
+    // ====================
+    public function saveReview(string $user_name, int $rating, string $comment): bool {
+        $stmt = $this->conn->prepare(
+            "INSERT INTO reviews (product_name, user_name, rating, comment)
+             VALUES (:product_name, :user_name, :rating, :comment)"
+        );
+
+        return $stmt->execute([
+            'product_name' => $this->getReviewTitle(),
+            'user_name'    => $user_name,
+            'rating'       => $rating,
+            'comment'      => $comment
+        ]);
     }
-    
-    public function getAllReviews($limit = 20) {
-        $review_title = $this->getReviewTitle();
-        $sql = "SELECT * FROM reviews WHERE product_name='$review_title' ORDER BY created_at DESC LIMIT $limit";
-        $result = $this->conn->query($sql);
-        
-        $reviews = [];
-        if($result && $result->num_rows > 0) {
-            while($row = $result->fetch_assoc()) {
-                $reviews[] = $row;
-            }
-        }
-        return $reviews;
+
+    // ====================
+    // ÖSSZES ÉRTÉKELÉS
+    // ====================
+    public function getAllReviews(int $limit = 20): array {
+        $stmt = $this->conn->prepare(
+            "SELECT *
+             FROM reviews
+             WHERE product_name = :product_name
+             ORDER BY created_at DESC
+             LIMIT :limit"
+        );
+
+        $stmt->bindValue(':product_name', $this->getReviewTitle(), PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
-    
-    public function getReviewsForHomepage($limit = 3) {
+
+    // ====================
+    // FŐOLDALI ÉRTÉKELÉSEK
+    // ====================
+    public function getReviewsForHomepage(int $limit = 3): array {
         return $this->getAllReviews($limit);
     }
-    
-    public function getReviewStats() {
-        $review_title = $this->getReviewTitle();
-        
-        $stats = ['total_reviews' => 0, 'avg_rating' => '0.0'];
-        
-        $total_result = $this->conn->query("SELECT COUNT(*) as total FROM reviews WHERE product_name='$review_title'");
-        if($total_result && $total_result->num_rows > 0) {
-            $total_data = $total_result->fetch_assoc();
-            $stats['total_reviews'] = $total_data['total'];
-        }
-        
-        $avg_result = $this->conn->query("SELECT AVG(rating) as avg FROM reviews WHERE product_name='$review_title'");
-        if($avg_result && $avg_result->num_rows > 0) {
-            $avg_data = $avg_result->fetch_assoc();
-            $stats['avg_rating'] = number_format($avg_data['avg'] ?? 0, 1);
-        }
-        
+
+    // ====================
+    // STATISZTIKA
+    // ====================
+    public function getReviewStats(): array {
+        $stats = [
+            'total_reviews' => 0,
+            'avg_rating'    => '0.0'
+        ];
+
+        // Összes értékelés
+        $stmtTotal = $this->conn->prepare(
+            "SELECT COUNT(*) FROM reviews WHERE product_name = :product_name"
+        );
+        $stmtTotal->execute([
+            'product_name' => $this->getReviewTitle()
+        ]);
+        $stats['total_reviews'] = (int)$stmtTotal->fetchColumn();
+
+        // Átlag értékelés
+        $stmtAvg = $this->conn->prepare(
+            "SELECT AVG(rating) FROM reviews WHERE product_name = :product_name"
+        );
+        $stmtAvg->execute([
+            'product_name' => $this->getReviewTitle()
+        ]);
+        $avg = $stmtAvg->fetchColumn();
+        $stats['avg_rating'] = number_format($avg ?? 0, 1);
+
         return $stats;
     }
 }
-?>
