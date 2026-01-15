@@ -1,7 +1,215 @@
 <?php
-require_once 'handler/orderhandler.php';
-?>
+session_start();
+require_once 'config.php';
 
+class OrderData {
+    private PDO $conn;
+
+    public function __construct(PDO $db_connection) {
+        $this->conn = $db_connection;
+    }
+
+    // ====================
+    // RENDELÉSEK EMAIL ALAPJÁN
+    // ====================
+    public function getOrdersByEmail(string $email): array {
+        $stmt = $this->conn->prepare(
+            "SELECT id, total_price, status, created_at, customer_name
+             FROM orders
+             WHERE customer_email = :email
+             ORDER BY created_at DESC"
+        );
+
+        $stmt->execute(['email' => $email]);
+        return $stmt->fetchAll();
+    }
+
+    // ====================
+    // RENDELÉS LEKÉRÉS ID + EMAIL
+    // ====================
+    public function getOrderById(int $order_id, string $email): ?array {
+        $stmt = $this->conn->prepare(
+            "SELECT *
+             FROM orders
+             WHERE id = :id AND customer_email = :email"
+        );
+
+        $stmt->execute([
+            'id'    => $order_id,
+            'email' => $email
+        ]);
+
+        $order = $stmt->fetch();
+        return $order ?: null;
+    }
+
+    // ====================
+    // RENDELÉS LÉTREHOZÁS
+    // ====================
+    public function createOrder(array $order_data): int|false {
+        $stmt = $this->conn->prepare(
+            "INSERT INTO orders
+            (customer_email, customer_name, total_price, status, created_at)
+            VALUES (:email, :name, :total_price, 'Not Processed', NOW())"
+        );
+
+        $success = $stmt->execute([
+            'email'       => $order_data['email'],
+            'name'        => $order_data['name'],
+            'total_price' => $order_data['total_price']
+        ]);
+
+        return $success ? (int)$this->conn->lastInsertId() : false;
+    }
+
+    // ====================
+    // RENDELÉS STÁTUSZ FRISSÍTÉS
+    // ====================
+    public function updateOrderStatus(
+        int $order_id,
+        string $status,
+        string $email
+    ): bool {
+        $stmt = $this->conn->prepare(
+            "UPDATE orders
+             SET status = :status
+             WHERE id = :id AND customer_email = :email"
+        );
+
+        return $stmt->execute([
+            'status' => $status,
+            'id'     => $order_id,
+            'email'  => $email
+        ]);
+    }
+
+    // ====================
+    // RENDELÉS TÖRLÉS
+    // ====================
+    public function deleteOrder(int $order_id, string $email): bool {
+        $stmt = $this->conn->prepare(
+            "DELETE FROM orders
+             WHERE id = :id AND customer_email = :email"
+        );
+
+        return $stmt->execute([
+            'id'    => $order_id,
+            'email' => $email
+        ]);
+    }
+}
+
+class OrderHandler {
+    private $orderData;
+    
+    public function __construct() {
+        global $conn;
+        $this->orderData = new OrderData($conn);
+    }
+
+    public function checkAuthentication() {
+        if (!isset($_SESSION['email'])) {
+            header("Location: index.php");
+            exit();
+        }
+        return $_SESSION['email'];
+    }
+
+    public function getCurrentCart() {
+        return $_SESSION['order'] ?? [];
+    }
+
+    public function calculateCartTotal($cart) {
+        $total = 0;
+        foreach ($cart as $item) {
+            $price = isset($item['quantity']) ? $item['price'] * $item['quantity'] : $item['price'];
+            $total += $price;
+        }
+        return $total;
+    }
+
+    public function clearCart() {
+        unset($_SESSION['order']);
+        return true;
+    }
+
+    public function getUserOrders($email) {
+        return $this->orderData->getOrdersByEmail($email);
+    }
+
+    public function getOrderStatusInfo($status) {
+        $statusColors = [
+            "Not Processed" => "#ff6b6b",
+            "Processed" => "#4ecdc4", 
+            "Handed to Courier" => "#45b7d1",
+            "On the Way" => "#96ceb4",
+            "Delivered" => "#95e1d3"
+        ];
+
+        $statusIcons = [
+            "Not Processed" => "fas fa-hourglass-half",
+            "Processed" => "fas fa-cogs",
+            "Handed to Courier" => "fas fa-handshake",
+            "On the Way" => "fas fa-shipping-fast",
+            "Delivered" => "fas fa-check-circle"
+        ];
+
+        return [
+            'color' => $statusColors[$status] ?? '#667eea',
+            'icon' => $statusIcons[$status] ?? 'fas fa-question'
+        ];
+    }
+
+    public function calculateProgress($status) {
+        switch($status) {
+            case 'Not Processed': return 20;
+            case 'Processed': return 40;
+            case 'Handed to Courier': return 60;
+            case 'On the Way': return 80;
+            case 'Delivered': return 100;
+            default: return 0;
+        }
+    }
+
+    public function getDaysAgo($date) {
+        $orderDate = strtotime($date);
+        $currentDate = time();
+        $daysDiff = floor(($currentDate - $orderDate) / (60 * 60 * 24));
+        
+        if ($daysDiff == 0) return 'Today';
+        if ($daysDiff == 1) return 'Yesterday';
+        return $daysDiff . ' days ago';
+    }
+
+    public function handleRequest() {
+        $user_email = $this->checkAuthentication();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (isset($_POST['clear_order'])) {
+                $this->clearCart();
+                header("Location: " . $_SERVER['PHP_SELF']);
+                exit();
+            }
+        }
+
+        $cart = $this->getCurrentCart();
+        $cart_total = $this->calculateCartTotal($cart);
+        $orders = $this->getUserOrders($user_email);
+
+        return [
+            'email' => $user_email,
+            'cart' => $cart,
+            'cart_total' => $cart_total,
+            'cart_count' => count($cart),
+            'orders' => $orders,
+            'orders_count' => count($orders)
+        ];
+    }
+}
+
+$handler = new OrderHandler();
+$data = $handler->handleRequest();
+?>
 <!DOCTYPE html>
 <html lang="hu">
 <head>
@@ -896,19 +1104,19 @@ require_once 'handler/orderhandler.php';
                 </div>
             <?php else: ?>
                 <div class="cart-items-compact">
-                    <?php foreach ($data['cart'] as $index => $order): ?>
+                    <?php foreach ($data['cart'] as $index => $item): ?>
                         <div class="cart-item-compact">
-                            <img src="<?= htmlspecialchars($order['image']) ?>" 
-                                 alt="<?= htmlspecialchars($order['name']) ?>" 
+                            <img src="<?= htmlspecialchars($item['image']) ?>" 
+                                 alt="<?= htmlspecialchars($item['name']) ?>" 
                                  class="cart-item-img"
                                  onerror="this.src='letoles.jpg'">
                             <div class="cart-item-info">
-                                <h3 class="cart-item-name"><?= htmlspecialchars($order['name']) ?></h3>
+                                <h3 class="cart-item-name"><?= htmlspecialchars($item['name']) ?></h3>
                                 <div class="cart-item-price">
-                                    $<?= number_format($order['price'], 2) ?>
-                                    <?php if (isset($order['quantity']) && $order['quantity'] > 1): ?>
+                                    $<?= number_format($item['price'], 2) ?>
+                                    <?php if (isset($item['quantity']) && $item['quantity'] > 1): ?>
                                         <span style="font-size: 0.85rem; color: #64748b;">
-                                            (<?= htmlspecialchars($order['quantity']) ?>×)
+                                            (<?= htmlspecialchars($item['quantity']) ?>×)
                                         </span>
                                     <?php endif; ?>
                                 </div>
