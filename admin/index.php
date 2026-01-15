@@ -3,25 +3,20 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-
 require_once __DIR__ . '/../config.php';
-
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../index.php");
     exit();
 }
 
-
 if ($_SESSION['is_admin'] != 1) {
     header("Location: ../fooldal.php");
     exit();
 }
 
-
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
-
 
 function loadController($controller) {
     $controllerFile = __DIR__ . '/controllers/' . $controller . '.php';
@@ -41,11 +36,9 @@ function loadModel($model) {
     }
 }
 
-
 loadModel('UserModel');
 loadModel('OrderModel');
 loadModel('PCModel');
-
 
 $page = $_GET['page'] ?? 'dashboard';
 $action = $_GET['action'] ?? 'index';
@@ -130,16 +123,15 @@ try {
     }
 } catch (Exception $e) {
     echo "<div style='background: #f8d7da; color: #721c24; padding: 20px; margin: 20px; border-radius: 8px;'>";
-    echo "<h3>Hiba történt:</h3>";
-    echo "<p><strong>Üzenet:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-    echo "<p><strong>Fájl:</strong> " . htmlspecialchars($e->getFile()) . "</p>";
+    echo "<h3>Something happened:</h3>";
+    echo "<p><strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p><strong>File:</strong> " . htmlspecialchars($e->getFile()) . "</p>";
     echo "<p><strong>Sort:</strong> " . htmlspecialchars($e->getLine()) . "</p>";
-    echo "<a href='index.php' style='color: #721c24; text-decoration: underline;'>Vissza a főoldalra</a>";
+    echo "<a href='index.php' style='color: #721c24; text-decoration: underline;'>Back to the main page!</a>";
     echo "</div>";
 }
 
-
-if (isset($conn) && $conn->ping()) {
-    $conn->close();
+if (isset($conn) && $conn instanceof PDO) {
+    $conn = null; 
 }
 ?>
