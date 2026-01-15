@@ -7,92 +7,67 @@ class PCModel {
     }
     
     public function getAllCategories() {
-        $result = $this->conn->query("SELECT * FROM pc_categories ORDER BY id ASC");
-        $categories = [];
-        
-        while ($row = $result->fetch_assoc()) {
-            $categories[] = $row;
-        }
-        
-        return $categories;
+        $stmt = $this->conn->query("SELECT * FROM pc_categories ORDER BY id ASC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     public function getCategoryById($id) {
         $stmt = $this->conn->prepare("SELECT * FROM pc_categories WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        return $result->fetch_assoc();
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
     public function addCategory($name) {
         $stmt = $this->conn->prepare("INSERT INTO pc_categories (name) VALUES (?)");
-        $stmt->bind_param("s", $name);
-        return $stmt->execute();
+        return $stmt->execute([$name]);
     }
     
     public function updateCategory($id, $name) {
         $stmt = $this->conn->prepare("UPDATE pc_categories SET name = ? WHERE id = ?");
-        $stmt->bind_param("si", $name, $id);
-        return $stmt->execute();
+        return $stmt->execute([$name, $id]);
     }
     
     public function deleteCategory($id) {
         $stmt = $this->conn->prepare("DELETE FROM pc_categories WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
+        return $stmt->execute([$id]);
     }
     
     public function getAllProducts() {
-        $result = $this->conn->query("
+        $stmt = $this->conn->query("
             SELECT p.*, c.name as category_name 
             FROM pc_products p 
             LEFT JOIN pc_categories c ON p.category_id = c.id 
             ORDER BY p.category_id, p.name
         ");
         
-        $products = [];
-        while ($row = $result->fetch_assoc()) {
-            $products[] = $row;
-        }
-        
-        return $products;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     public function getProductById($id) {
         $stmt = $this->conn->prepare("SELECT * FROM pc_products WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        return $result->fetch_assoc();
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
     public function addProduct($name, $price, $image, $category_id) {
         $stmt = $this->conn->prepare("INSERT INTO pc_products (name, price, image, category_id) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("sdsi", $name, $price, $image, $category_id);
-        return $stmt->execute();
+        return $stmt->execute([$name, $price, $image, $category_id]);
     }
     
     public function updateProduct($id, $name, $price, $image, $category_id) {
         $stmt = $this->conn->prepare("UPDATE pc_products SET name = ?, price = ?, image = ?, category_id = ? WHERE id = ?");
-        $stmt->bind_param("sdsii", $name, $price, $image, $category_id, $id);
-        return $stmt->execute();
+        return $stmt->execute([$name, $price, $image, $category_id, $id]);
     }
     
     public function deleteProduct($id) {
         $stmt = $this->conn->prepare("DELETE FROM pc_products WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
+        return $stmt->execute([$id]);
     }
     
     public function hasProductsInCategory($categoryId) {
         $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM pc_products WHERE category_id = ?");
-        $stmt->bind_param("i", $categoryId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
+        $stmt->execute([$categoryId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $row['count'] > 0;
     }
