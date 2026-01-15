@@ -7,30 +7,23 @@ class OrderModel {
     }
     
     public function getAllOrders() {
-        $result = $this->conn->query("SELECT * FROM orders ORDER BY created_at DESC");
-        $orders = [];
-        
-        while ($row = $result->fetch_assoc()) {
-            $orders[] = $row;
-        }
-        
-        return $orders;
+        $stmt = $this->conn->query("SELECT * FROM orders ORDER BY created_at DESC");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     public function updateStatus($orderId, $status) {
         $stmt = $this->conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $status, $orderId);
-        return $stmt->execute();
+        return $stmt->execute([$status, $orderId]);
     }
     
     public function deleteOrder($orderId) {
-        $check = $this->conn->query("SELECT status FROM orders WHERE id = $orderId");
-        $row = $check->fetch_assoc();
+        $stmt = $this->conn->prepare("SELECT status FROM orders WHERE id = ?");
+        $stmt->execute([$orderId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($row['status'] === 'Delivered') {
+        if ($row && $row['status'] === 'Delivered') {
             $stmt = $this->conn->prepare("DELETE FROM orders WHERE id = ?");
-            $stmt->bind_param("i", $orderId);
-            return $stmt->execute();
+            return $stmt->execute([$orderId]);
         }
         
         return false;
@@ -38,11 +31,8 @@ class OrderModel {
     
     public function getOrderById($orderId) {
         $stmt = $this->conn->prepare("SELECT * FROM orders WHERE id = ?");
-        $stmt->bind_param("i", $orderId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        return $result->fetch_assoc();
+        $stmt->execute([$orderId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
 ?>
