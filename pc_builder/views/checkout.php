@@ -1,20 +1,18 @@
 <?php
+$rootPath = dirname(__DIR__); 
+$szakPath = dirname(__DIR__, 2); 
 
-$rootPath = dirname(dirname(__DIR__));
-require_once $rootPath . '/src/PHPMailer.php';
-require_once $rootPath . '/src/Exception.php';
-require_once $rootPath . '/src/SMTP.php';
+require_once $szakPath . '/src/PHPMailer.php';
+require_once $szakPath . '/src/Exception.php';
+require_once $szakPath . '/src/SMTP.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-
-require_once dirname(__DIR__) . '/config/database.php';
-require_once dirname(__DIR__) . '/models/Configuration.php';
-require_once dirname(__DIR__) . '/models/Product.php';
-require_once dirname(__DIR__) . '/models/Category.php';
-
-
+require_once $rootPath . '/config/database.php';
+require_once $rootPath . '/models/Configuration.php';
+require_once $rootPath . '/models/Product.php';
+require_once $rootPath . '/models/Category.php';
 
 if (!isset($_SESSION['email'])) {
     header("Location: /Szak/login.php");
@@ -28,7 +26,6 @@ $categoryModel = new Category();
 $sid = session_id();
 $items = $configModel->getItems($sid);
 
-
 $order_list = [];
 $subTotal = 0.0;
 
@@ -36,7 +33,6 @@ foreach ($items as $item) {
     $product = $productModel->getById($item['item_id']);
     if ($product) {
         $category = $categoryModel->getById($product['category_id']);
-        
         $order_list[] = [
             'id' => $item['item_id'],
             'name' => htmlspecialchars($item['name']),
@@ -56,7 +52,7 @@ if (empty($order_list)) {
 $validCoupons = [
     'SUMMER10' => 0.10,
     'FREESHIP' => 'FREESHIP',
-    'PCBUILD5' => 0.05  
+    'PCBUILD5' => 0.05
 ];
 
 $shippingFlat = 4.99;
@@ -131,32 +127,37 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $db = Database::getInstance();
             $conn = $db->getConnection();
             
-            $stmt = $conn->prepare("INSERT INTO orders 
-                (customer_name, customer_email, customer_address, card_type, card_number, expiry, cvv, order_data, total_price, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PC Configuration Ordered', NOW())");
-            
-            if ($stmt === false) {
-                $error = "Database error. Please try again later.";
-            } else {
-                $stmt->bind_param(
-                    "ssssssssd",
-                    $name,
-                    $email,
-                    $address,
-                    $cardType,
-                    $cardNumberMasked,
-                    $expiry,
-                    $cvvMasked,
-                    $orderData,
-                    $totalPrice
-                );
-
+            try {
+                $sql = "INSERT INTO orders 
+                    (customer_name, customer_email, customer_address, card_type, card_number, expiry, cvv, order_data, total_price, status, created_at) 
+                    VALUES (:customer_name, :customer_email, :customer_address, :card_type, :card_number, :expiry, :cvv, :order_data, :total_price, 'PC Configuration Ordered', NOW())";
+                
+                $stmt = $conn->prepare($sql);
+                
+                $stmt->bindParam(':customer_name', $name);
+                $stmt->bindParam(':customer_email', $email);
+                $stmt->bindParam(':customer_address', $address);
+                $stmt->bindParam(':card_type', $cardType);
+                $stmt->bindParam(':card_number', $cardNumberMasked);
+                $stmt->bindParam(':expiry', $expiry);
+                $stmt->bindParam(':cvv', $cvvMasked);
+                $stmt->bindParam(':order_data', $orderData);
+                $stmt->bindParam(':total_price', $totalPrice);
+                
                 if ($stmt->execute()) {
-                    $orderId = $conn->insert_id;
+                    $orderId = $conn->lastInsertId();
                     
                     try {
                         // SMTP beállítások betöltése config.php-ból
-                        require_once $rootPath . '/config.php';
+                        // A $rootPath változó itt már elérhető, mert globális scope-ban van
+                        $configPath = $rootPath . '/config.php';
+                        
+                        if (!file_exists($configPath)) {
+                            // Ha nem található a config.php, próbáljuk meg másik helyen
+                            $configPath = $rootPath . '/../config.php';
+                        }
+                        
+                        require_once $configPath;
                         
                         $mail = new PHPMailer(true);
                         
@@ -396,13 +397,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 } else {
                     $error = "Error processing your order. Please try again.";
                 }
-
-                $stmt->close();
+            } catch (PDOException $e) {
+                $error = "Database error: " . $e->getMessage();
             }
         }
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
