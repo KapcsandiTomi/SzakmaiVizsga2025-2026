@@ -1,111 +1,159 @@
 <?php
+
 class ProfileData {
-    private $conn;
-    private $user;
-    
-    public function __construct($database_connection, $user_id = null) {
+    private PDO $conn;
+    private ?array $user = null;
+
+    public function __construct(PDO $database_connection, ?int $user_id = null) {
         $this->conn = $database_connection;
         if ($user_id) {
             $this->loadUser($user_id);
         }
     }
-    
-    public function loadUser($user_id) {
-        $stmt = $this->conn->prepare("SELECT id, name, email, profile_pic FROM `4` WHERE id = ?");
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $this->user = $result->fetch_assoc();
-        $stmt->close();
-        
+
+    // ====================
+    // FELHASZNÁLÓ BETÖLTÉSE ID ALAPJÁN
+    // ====================
+    public function loadUser(int $user_id): ?array {
+        $stmt = $this->conn->prepare(
+            "SELECT id, name, email, profile_pic
+             FROM `4`
+             WHERE id = :id"
+        );
+        $stmt->execute(['id' => $user_id]);
+
+        $this->user = $stmt->fetch();
+        return $this->user ?: null;
+    }
+
+    // ====================
+    // FELHASZNÁLÓ BETÖLTÉSE EMAIL ALAPJÁN
+    // ====================
+    public function loadUserByEmail(string $email): ?array {
+        $stmt = $this->conn->prepare(
+            "SELECT id, name, email, profile_pic
+             FROM `4`
+             WHERE email = :email"
+        );
+        $stmt->execute(['email' => $email]);
+
+        $this->user = $stmt->fetch();
+        return $this->user ?: null;
+    }
+
+    // ====================
+    // AKTUÁLIS FELHASZNÁLÓ
+    // ====================
+    public function getUser(): ?array {
         return $this->user;
     }
-    
-    public function loadUserByEmail($email) {
-        $stmt = $this->conn->prepare("SELECT id, name, email, profile_pic FROM `4` WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $this->user = $result->fetch_assoc();
-        $stmt->close();
-        
-        return $this->user;
+
+    // ====================
+    // KEDVENCEK LEKÉRÉSE
+    // ====================
+    public function getUserFavorites(int $user_id): array {
+        $stmt = $this->conn->prepare(
+            "SELECT *
+             FROM favorites
+             WHERE user_id = :user_id
+             ORDER BY created_at DESC"
+        );
+        $stmt->execute(['user_id' => $user_id]);
+
+        return $stmt->fetchAll();
     }
-    
-    public function getUser() {
-        return $this->user;
+
+    // ====================
+    // PROFIL FRISSÍTÉS
+    // ====================
+    public function updateProfile(int $user_id, string $name, string $email): bool {
+        $stmt = $this->conn->prepare(
+            "UPDATE `4`
+             SET name = :name, email = :email
+             WHERE id = :id"
+        );
+
+        return $stmt->execute([
+            'name'  => $name,
+            'email' => $email,
+            'id'    => $user_id
+        ]);
     }
-    
-    public function getUserFavorites($user_id) {
-        $favorites = [];
-        $favoritesStmt = $this->conn->prepare("SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC");
-        $favoritesStmt->bind_param("i", $user_id);
-        $favoritesStmt->execute();
-        $favoritesResult = $favoritesStmt->get_result();
-        while ($row = $favoritesResult->fetch_assoc()) {
-            $favorites[] = $row;
-        }
-        $favoritesStmt->close();
-        
-        return $favorites;
+
+    // ====================
+    // EMAIL ÜTKÖZÉS ELLENŐRZÉS
+    // ====================
+    public function checkEmailExists(string $email, int $user_id): bool {
+        $stmt = $this->conn->prepare(
+            "SELECT 1
+             FROM `4`
+             WHERE email = :email AND id != :id"
+        );
+        $stmt->execute([
+            'email' => $email,
+            'id'    => $user_id
+        ]);
+
+        return $stmt->fetchColumn() !== false;
     }
-    
-    public function updateProfile($user_id, $name, $email) {
-        $stmt = $this->conn->prepare("UPDATE `4` SET name = ?, email = ? WHERE id = ?");
-        $stmt->bind_param("ssi", $name, $email, $user_id);
-        $result = $stmt->execute();
-        $stmt->close();
-        
-        return $result;
+
+    // ====================
+    // JELSZÓ CSERE
+    // ====================
+    public function changePassword(int $user_id, string $new_password): bool {
+        $hash = password_hash($new_password, PASSWORD_DEFAULT);
+
+        $stmt = $this->conn->prepare(
+            "UPDATE `4`
+             SET password = :password
+             WHERE id = :id"
+        );
+
+        return $stmt->execute([
+            'password' => $hash,
+            'id'       => $user_id
+        ]);
     }
-    
-    public function checkEmailExists($email, $user_id) {
-        $checkStmt = $this->conn->prepare("SELECT id FROM `4` WHERE email = ? AND id != ?");
-        $checkStmt->bind_param("si", $email, $user_id);
-        $checkStmt->execute();
-        $checkResult = $checkStmt->get_result();
-        $exists = $checkResult->num_rows > 0;
-        $checkStmt->close();
-        
-        return $exists;
+
+    // ====================
+    // JELENLEGI JELSZÓ LEKÉRÉS
+    // ====================
+    public function getCurrentPassword(int $user_id): ?string {
+        $stmt = $this->conn->prepare(
+            "SELECT password FROM `4` WHERE id = :id"
+        );
+        $stmt->execute(['id' => $user_id]);
+
+        return $stmt->fetchColumn() ?: null;
     }
-    
-    public function changePassword($user_id, $new_password) {
-        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-        $stmt = $this->conn->prepare("UPDATE `4` SET password = ? WHERE id = ?");
-        $stmt->bind_param("si", $hashed_password, $user_id);
-        $result = $stmt->execute();
-        $stmt->close();
-        
-        return $result;
+
+    // ====================
+    // PROFILKÉP FRISSÍTÉS
+    // ====================
+    public function updateProfilePicture(int $user_id, string $profile_pic_path): bool {
+        $stmt = $this->conn->prepare(
+            "UPDATE `4`
+             SET profile_pic = :profile_pic
+             WHERE id = :id"
+        );
+
+        return $stmt->execute([
+            'profile_pic' => $profile_pic_path,
+            'id'          => $user_id
+        ]);
     }
-    
-    public function getCurrentPassword($user_id) {
-        $stmt = $this->conn->prepare("SELECT password FROM `4` WHERE id = ?");
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $stmt->bind_result($hashedPassword);
-        $stmt->fetch();
-        $stmt->close();
-        
-        return $hashedPassword;
-    }
-    
-    public function updateProfilePicture($user_id, $profile_pic_path) {
-        $stmt = $this->conn->prepare("UPDATE `4` SET profile_pic = ? WHERE id = ?");
-        $stmt->bind_param("si", $profile_pic_path, $user_id);
-        $result = $stmt->execute();
-        $stmt->close();
-        
-        return $result;
-    }
-    
-    public function deleteOldProfilePicture($profile_pic_path) {
-        if ($profile_pic_path && file_exists($profile_pic_path) && 
-            strpos($profile_pic_path, 'uploads/') !== false) {
+
+    // ====================
+    // RÉGI PROFILKÉP TÖRLÉSE
+    // ====================
+    public function deleteOldProfilePicture(?string $profile_pic_path): bool {
+        if (
+            $profile_pic_path &&
+            file_exists($profile_pic_path) &&
+            str_starts_with($profile_pic_path, 'uploads/')
+        ) {
             return unlink($profile_pic_path);
         }
         return false;
     }
 }
-?>
