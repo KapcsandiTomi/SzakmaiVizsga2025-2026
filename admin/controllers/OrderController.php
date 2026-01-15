@@ -18,7 +18,7 @@ class OrderController {
         
         if (isset($postData['order_id'], $postData['status'])) {
             $orderId = intval($postData['order_id']);
-            $status = $this->conn->real_escape_string($postData['status']);
+            $status = $postData['status'];
             
             if ($this->orderModel->updateStatus($orderId, $status)) {
                 $_SESSION['success'] = "Order status updated successfully!";
