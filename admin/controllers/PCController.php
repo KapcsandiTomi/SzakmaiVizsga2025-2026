@@ -134,7 +134,6 @@ class PCController {
             $current_image = $postData['current_image'] ?? '';
             $image = $current_image;
             
-            
             if (isset($files['product_image']) && $files['product_image']['error'] == 0) {
                 $new_image = $this->handleImageUpload($files['product_image']);
                 if ($new_image !== false) {
@@ -176,7 +175,7 @@ class PCController {
     
     private function handleImageUpload($file) {
         $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        $max_size = 5 * 1024 * 1024; 
+        $max_size = 5 * 1024 * 1024;
         
         if (!in_array($file['type'], $allowed_types)) {
             $_SESSION['error'] = "Invalid image type! Only JPG, PNG, GIF, WEBP allowed.";
