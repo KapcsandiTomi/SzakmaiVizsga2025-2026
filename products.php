@@ -1,90 +1,115 @@
 <?php
-// MUNKAMENET INDITASA
+// ====================
+// MUNKAMENET INDÍTÁSA
+// ====================
 session_start();
-// HA NINCS EMAIL A MUNKAMENETBEN, ATIRANYITAS A FŐOLDALRA
+
+// HA NINCS EMAIL A SESSIONBEN → FŐOLDAL
 if (!isset($_SESSION['email'])) {
     header('Location: index.php');
-    exit();
+    exit;
 }
 
-// ADATBÁZIS KAPCSOLAT BEÁLLITÁSA
+// ====================
+// ADATBÁZIS KAPCSOLAT
+// ====================
 require_once 'config.php';
 
-// FELHASZNÁLÓ AZONOSITÓ LEKÉRÉSE
-$user_id = null;
-// FELHASZNÁLÓ KERESÉSE AZ EMAIL CÍM ALAPJÁN
-$stmt = $conn->prepare("SELECT id FROM `4` WHERE email = ?");
-$stmt->bind_param("s", $_SESSION['email']);
-$stmt->execute();
-$result = $stmt->get_result();
-// HA VAN ILYEN FELHASZNÁLÓ, AZ AZONOSITÓ ELMENTÉSE
-if ($user = $result->fetch_assoc()) {
-    $user_id = $user['id'];
-}
-$stmt->close();
+// ====================
+// FELHASZNÁLÓ AZONOSÍTÁSA
+// ====================
+$stmt = $conn->prepare(
+    "SELECT id FROM `4` WHERE email = :email"
+);
+$stmt->execute([
+    'email' => $_SESSION['email']
+]);
 
-// ÜZENET VÁLTOZÓK INICIALIZÁLÁSA
+$user_id = $stmt->fetchColumn();
+if (!$user_id) {
+    header('Location: index.php');
+    exit;
+}
+
+// ====================
+// ÜZENETEK
+// ====================
 $message = '';
 $message_type = '';
 
-// KEDVENCEK KEZELÉSE: HOZZÁADÁS VAGY ELTÁVOLÍTÁS
-if (isset($_POST['toggle_favorite']) && $user_id) {
-    // TERMÉK ADATAI BEGYŰJTÉSE
-    $product_id = $_POST['product_id'];
-    $product_name = $_POST['product_name'];
-    $product_image = $_POST['product_image'];
-    $product_link = $_POST['product_link'];
-    
-    // ELLENŐRZÉS, HOGY A TERMÉK MÁR KEDVENC-E
-    $checkStmt = $conn->prepare("SELECT id FROM favorites WHERE user_id = ? AND product_id = ?");
-    $checkStmt->bind_param("is", $user_id, $product_id);
-    $checkStmt->execute();
-    $checkResult = $checkStmt->get_result();
-    
-    // HA MÁR KEDVENC, AKKOR TÖRLÉS
-    if ($checkResult->num_rows > 0) {
-        $deleteStmt = $conn->prepare("DELETE FROM favorites WHERE user_id = ? AND product_id = ?");
-        $deleteStmt->bind_param("is", $user_id, $product_id);
-        $deleteStmt->execute();
-        $deleteStmt->close();
-        $message = "Product removed from favorites!";
-        $message_type = "success";
+// ====================
+// KEDVENC HOZZÁADÁS / TÖRLÉS
+// ====================
+if (isset($_POST['toggle_favorite'])) {
+
+    $product_id    = $_POST['product_id'] ?? '';
+    $product_name  = $_POST['product_name'] ?? '';
+    $product_image = $_POST['product_image'] ?? '';
+    $product_link  = $_POST['product_link'] ?? '';
+
+    // Ellenőrzés: már kedvenc?
+    $stmt = $conn->prepare(
+        "SELECT id FROM favorites
+         WHERE user_id = :user_id AND product_id = :product_id"
+    );
+    $stmt->execute([
+        'user_id'    => $user_id,
+        'product_id' => $product_id
+    ]);
+
+    if ($stmt->fetch()) {
+        // TÖRLÉS
+        $stmt = $conn->prepare(
+            "DELETE FROM favorites
+             WHERE user_id = :user_id AND product_id = :product_id"
+        );
+        $stmt->execute([
+            'user_id'    => $user_id,
+            'product_id' => $product_id
+        ]);
+
+        $message = 'Product removed from favorites!';
+        $message_type = 'success';
+
     } else {
-        // HA NEM KEDVENC, HOZZÁADÁS
-        $insertStmt = $conn->prepare("INSERT INTO favorites (user_id, product_id, product_name, product_image, product_link) VALUES (?, ?, ?, ?, ?)");
-        $insertStmt->bind_param("issss", $user_id, $product_id, $product_name, $product_image, $product_link);
-        $insertStmt->execute();
-        $insertStmt->close();
-        $message = "Product added to favorites!";
-        $message_type = "success";
+        // HOZZÁADÁS
+        $stmt = $conn->prepare(
+            "INSERT INTO favorites
+            (user_id, product_id, product_name, product_image, product_link)
+            VALUES (:user_id, :product_id, :product_name, :product_image, :product_link)"
+        );
+
+        $stmt->execute([
+            'user_id'       => $user_id,
+            'product_id'    => $product_id,
+            'product_name'  => $product_name,
+            'product_image' => $product_image,
+            'product_link'  => $product_link
+        ]);
+
+        $message = 'Product added to favorites!';
+        $message_type = 'success';
     }
-    $checkStmt->close();
-    
-    // KEDVENCEK LISTÁJÁNAK FRISSÍTÉSE A MUNKAMENETBEN
-    $favoritesStmt = $conn->prepare("SELECT product_id FROM favorites WHERE user_id = ?");
-    $favoritesStmt->bind_param("i", $user_id);
-    $favoritesStmt->execute();
-    $favoritesResult = $favoritesStmt->get_result();
-    $_SESSION['favorites'] = [];
-    // ÖSSZES KEDVENC TERMÉK HOZZÁADÁSA A MUNKAMENETHEZ
-    while ($row = $favoritesResult->fetch_assoc()) {
-        $_SESSION['favorites'][] = $row['product_id'];
-    }
-    $favoritesStmt->close();
+
+    // SESSION KEDVENCEK FRISSÍTÉSE
+    $stmt = $conn->prepare(
+        "SELECT product_id FROM favorites WHERE user_id = :user_id"
+    );
+    $stmt->execute(['user_id' => $user_id]);
+
+    $_SESSION['favorites'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-// HA NINCS MÉG KEDVENCEK LISTA A MUNKAMENETBEN, BETÖLTÉS
-if (!isset($_SESSION['favorites']) && $user_id) {
-    $favoritesStmt = $conn->prepare("SELECT product_id FROM favorites WHERE user_id = ?");
-    $favoritesStmt->bind_param("i", $user_id);
-    $favoritesStmt->execute();
-    $favoritesResult = $favoritesStmt->get_result();
-    $_SESSION['favorites'] = [];
-    // ÖSSZES KEDVENC TERMÉK HOZZÁADÁSA A MUNKAMENETHEZ
-    while ($row = $favoritesResult->fetch_assoc()) {
-        $_SESSION['favorites'][] = $row['product_id'];
-    }
-    $favoritesStmt->close();
+// ====================
+// KEDVENCEK BETÖLTÉSE SESSIONBE (HA NINCS)
+// ====================
+if (!isset($_SESSION['favorites'])) {
+    $stmt = $conn->prepare(
+        "SELECT product_id FROM favorites WHERE user_id = :user_id"
+    );
+    $stmt->execute(['user_id' => $user_id]);
+
+    $_SESSION['favorites'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 ?>
 
