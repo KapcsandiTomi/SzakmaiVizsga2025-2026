@@ -1,6 +1,4 @@
-const API_BASE = window.location.pathname.includes('/pc_builder') 
-    ? '/Szak/pc_builder' 
-    : '';
+const API_BASE = window.location.origin + '/Szak/pc_builder';
 
 class PCConfigurator {
     constructor() {
