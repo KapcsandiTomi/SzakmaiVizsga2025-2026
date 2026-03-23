@@ -1838,7 +1838,7 @@ if (!isset($_SESSION['favorites'])) {
       <h2>FOLLOW US<div class="underline"><span></span></div></h2>
       <div class="social-icons">
         <a href="https://www.facebook.com/groups/780808788334912"><i class="fab fa-facebook-f"></i></a>
-        <a href="https://x.com/tamas_kapc343"><i class="fab fa-twitter"></i></a>
+        <a href="https://x.com/tamas_kapc343"><i class="fa-brands fa-x-twitter"></i></a>
         <a href="https://www.instagram.com/aqua.mini.shop/"><i class="fab fa-instagram"></i></a>
       </div>
     </div>
