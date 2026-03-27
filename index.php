@@ -73,33 +73,51 @@ function isMissingForgotField($fieldType, $missingFields) {
 }
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aqua Portal - Login & Registration</title>
-    <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="letoles.jpg" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 20px;
+        }
+
         .main-container {
             width: 100%;
             max-width: 1200px;
-            margin: 40px auto;
+            margin: 0 auto;
             display: flex;
             min-height: 700px;
             border-radius: 24px;
             overflow: hidden;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             background: white;
+            position: relative;
+            z-index: 2;
         }
         
         .form-side {
             flex: 1;
             padding: 0;
             background: white;
+            display: flex;
+            flex-direction: column;
         }
         
         .welcome-side {
@@ -120,11 +138,9 @@ function isMissingForgotField($fieldType, $missingFields) {
 
         .form-tabs {
             display: flex;
-            background: rgba(255, 255, 255, 0.1);
+            background: #f8f9fa;
             border-radius: 15px 15px 0 0;
             overflow: hidden;
-            margin-bottom: 0;
-            backdrop-filter: blur(10px);
             border-bottom: 2px solid rgba(7, 185, 212, 0.2);
         }
         
@@ -154,10 +170,7 @@ function isMissingForgotField($fieldType, $missingFields) {
         
         .tab-btn.active {
             color: white;
-            background: linear-gradient(135deg, 
-                rgba(7, 185, 212, 0.9),
-                rgba(34, 174, 106, 0.9)
-            );
+            background: linear-gradient(135deg, #07b9d4, #22ae6a);
             box-shadow: 0 4px 15px rgba(7, 185, 212, 0.3);
         }
         
@@ -182,12 +195,11 @@ function isMissingForgotField($fieldType, $missingFields) {
         }
         
         .form-container {
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 0 0 15px 15px;
             padding: 40px 35px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            min-height: 500px;
-            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            flex: 1;
         }
         
         .form-content {
@@ -230,6 +242,7 @@ function isMissingForgotField($fieldType, $missingFields) {
             left: 15px;
             color: #07b9d4;
             font-size: 18px;
+            z-index: 1;
         }
         
         .input-with-icon input {
@@ -265,7 +278,6 @@ function isMissingForgotField($fieldType, $missingFields) {
             font-size: 12px;
             color: #ff4757;
             margin-top: 5px;
-            margin-bottom: 15px;
             padding-left: 10px;
             display: none;
         }
@@ -366,70 +378,102 @@ function isMissingForgotField($fieldType, $missingFields) {
             color: #7f8c8d;
         }
         
+        .requirement:last-child {
+            margin-bottom: 0;
+        }
+        
         .requirement.valid {
             color: #27ae60;
         }
         
         .requirement .indicator {
             font-size: 12px;
+            width: 20px;
+            display: inline-block;
         }
         
         .form-options {
             margin: 20px 0;
         }
         
-        .checkbox {
+        .checkbox-wrapper {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
+            gap: 12px;
             cursor: pointer;
-            font-size: 14px;
-            color: #5d6d7e;
         }
         
-        .checkbox input {
-            display: none;
+        .checkbox-wrapper input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
         }
         
-        .checkmark {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            margin-right: 10px;
+        .custom-checkbox {
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            background: white;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
             position: relative;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
         
-        .checkbox input:checked ~ .checkmark {
-            background: #07b9d4;
+        .checkbox-wrapper:hover .custom-checkbox {
             border-color: #07b9d4;
+            background: rgba(7, 185, 212, 0.05);
         }
         
-        .checkmark::after {
+        .checkbox-wrapper input:checked ~ .custom-checkbox {
+            background: linear-gradient(135deg, #07b9d4, #22ae6a);
+            border-color: #07b9d4;
+            animation: checkPop 0.2s ease;
+        }
+        
+        @keyframes checkPop {
+            0% { transform: scale(0.9); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .custom-checkbox::after {
             content: '';
             position: absolute;
             display: none;
-            left: 6px;
-            top: 2px;
-            width: 5px;
-            height: 10px;
+            left: 7px;
+            top: 3px;
+            width: 6px;
+            height: 11px;
             border: solid white;
             border-width: 0 2px 2px 0;
             transform: rotate(45deg);
         }
         
-        .checkbox input:checked ~ .checkmark::after {
+        .checkbox-wrapper input:checked ~ .custom-checkbox::after {
             display: block;
+        }
+        
+        .checkbox-text {
+            line-height: 1.4;
+            color: #5d6d7e;
+            font-size: 14px;
+            cursor: pointer;
         }
         
         .terms-link {
             color: #07b9d4;
             text-decoration: none;
             font-weight: 600;
+            transition: all 0.2s;
         }
         
         .terms-link:hover {
             text-decoration: underline;
+            color: #1a8f9e;
         }
         
         .welcome-side::before {
@@ -442,6 +486,7 @@ function isMissingForgotField($fieldType, $missingFields) {
             background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path fill="rgba(255,255,255,0.05)" d="M44.5,-74.5C56.8,-68.7,65.3,-56.8,74.4,-44.4C83.5,-32,93.2,-19.2,94.8,-5.2C96.4,8.8,90,20.9,80.5,31.8C71,42.7,58.3,52.4,44.4,58.5C30.6,64.6,15.3,67.1,0.3,66.6C-14.7,66.2,-29.3,62.7,-42.8,56.2C-56.3,49.7,-68.6,40.1,-74.8,27.4C-81,14.7,-81.1,-1.2,-77.6,-16.3C-74,-31.5,-67,-45.9,-56.3,-53.5C-45.7,-61.2,-31.3,-62.2,-18.8,-68.7C-6.3,-75.2,4.4,-87.2,17,-85.4C29.6,-83.7,44,-68.2,44.5,-74.5Z" transform="translate(100 100)"/></svg>');
             opacity: 0.3;
             animation: waveMove 20s linear infinite;
+            pointer-events: none;
         }
         
         @keyframes waveMove {
@@ -633,10 +678,16 @@ function isMissingForgotField($fieldType, $missingFields) {
         }
         
         @media (max-width: 992px) {
+            body {
+                padding: 20px;
+                align-items: flex-start;
+            }
+            
             .main-container {
                 flex-direction: column;
                 max-width: 600px;
-                margin: 20px auto;
+                margin: 0 auto;
+                min-height: auto;
             }
             
             .welcome-side {
@@ -659,9 +710,12 @@ function isMissingForgotField($fieldType, $missingFields) {
         }
         
         @media (max-width: 576px) {
+            body {
+                padding: 10px;
+            }
+            
             .main-container {
                 border-radius: 15px;
-                margin: 10px;
                 min-height: auto;
             }
             
@@ -738,7 +792,6 @@ function isMissingForgotField($fieldType, $missingFields) {
         </div>
         
         <div class="form-container">
-            <!-- Login Form -->
             <div id="login-content" class="form-content <?php echo isActiveForm('login', $activeForm); ?>">
                 <form action="login-register.php" method="post">
                     <h2><i class="fas fa-sign-in-alt"></i> Welcome Back</h2>
@@ -777,7 +830,6 @@ function isMissingForgotField($fieldType, $missingFields) {
                 </form>
             </div>
             
-            <!-- Register Form -->
             <div id="register-content" class="form-content <?php echo isActiveForm('register', $activeForm); ?>">
                 <form action="login-register.php" method="post" id="registerForm">
                     <h2><i class="fas fa-user-plus"></i> Create Account</h2>
@@ -802,7 +854,7 @@ function isMissingForgotField($fieldType, $missingFields) {
                                    class="<?php echo isMissingField('email', $missingFields); ?>"
                                    placeholder="Email address" required>
                         </div>
-                        <div class="field-requirement">Please enter a valid .com or .hu email</div>
+                        <div class="field-requirement">Please enter a valid email address</div>
                     </div>
                     
                     <div class="input-group">
@@ -810,8 +862,7 @@ function isMissingForgotField($fieldType, $missingFields) {
                             <i class="fas fa-lock"></i>
                             <input type="password" name="password" id="registerPassword" 
                                    class="<?php echo isMissingField('password', $missingFields); ?>"
-                                   placeholder="Create password" required
-                                   oninput="checkPasswordStrength()">
+                                   placeholder="Create password" required>
                         </div>
                         <div class="field-requirement">Password is required and must meet all requirements</div>
                         
@@ -830,16 +881,18 @@ function isMissingForgotField($fieldType, $missingFields) {
                             </div>
                             <div class="requirement" id="req-special">
                                 <span class="indicator" id="ind-special">●</span>
-                                <span>One special character</span>
+                                <span>One special character (!@#$%^&*)</span>
                             </div>
                         </div>
                     </div>
                     
                     <div class="form-options">
-                        <label class="checkbox">
-                            <input type="checkbox" name="terms" required>
-                            <span class="checkmark"></span>
-                            I agree to the <a href="terms.php" class="terms-link" target="_blank"> Terms & Conditions</a>
+                        <label class="checkbox-wrapper">
+                            <input type="checkbox" name="terms" id="termsCheckbox" required>
+                            <span class="custom-checkbox"></span>
+                            <span class="checkbox-text">
+                                I agree to the <a href="terms.php" class="terms-link" target="_blank">Terms & Conditions</a>
+                            </span>
                         </label>
                     </div>
                     
@@ -850,7 +903,6 @@ function isMissingForgotField($fieldType, $missingFields) {
                 </form>
             </div>
             
-            <!-- Forgot Password Form -->
             <div id="forgot-content" class="form-content <?php echo isActiveForm('forgot', $activeForm); ?>">
                 <form action="login-register.php" method="post">
                     <h2><i class="fas fa-key"></i> Reset Password</h2>
@@ -899,7 +951,6 @@ function isMissingForgotField($fieldType, $missingFields) {
         </div>
     </div>
     
-    <!-- Welcome Side -->
     <div class="welcome-side">
         <div class="welcome-content">
             <div class="logo">
@@ -955,6 +1006,109 @@ function isMissingForgotField($fieldType, $missingFields) {
 document.addEventListener('DOMContentLoaded', function() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const formContents = document.querySelectorAll('.form-content');
+    const registerPassword = document.getElementById('registerPassword');
+    const registerButton = document.getElementById('registerButton');
+    const termsCheckbox = document.getElementById('termsCheckbox');
+    
+    function checkPasswordStrength() {
+        if (!registerPassword) return true;
+        
+        const password = registerPassword.value;
+        
+        const requirements = {
+            length: password.length >= 6,
+            uppercase: /[A-Z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*()\-_=+{};:,<.>]/.test(password)
+        };
+        
+        const allValid = requirements.length && requirements.uppercase && requirements.number && requirements.special;
+        
+        if (document.getElementById('req-length')) {
+            updateRequirement('length', requirements.length);
+            updateRequirement('uppercase', requirements.uppercase);
+            updateRequirement('number', requirements.number);
+            updateRequirement('special', requirements.special);
+        }
+        
+        if (registerButton) {
+            registerButton.disabled = !allValid;
+        }
+        
+        if (!allValid && password.length > 0) {
+            registerPassword.classList.add('missing-field');
+        } else if (allValid) {
+            registerPassword.classList.remove('missing-field');
+        }
+        
+        return allValid;
+    }
+    
+    function updateRequirement(type, isValid) {
+        const reqElement = document.getElementById(`req-${type}`);
+        const indicator = document.getElementById(`ind-${type}`);
+        if (reqElement && indicator) {
+            if (isValid) {
+                reqElement.classList.add('valid');
+                indicator.textContent = '✓';
+                indicator.style.color = '#2ecc71';
+            } else {
+                reqElement.classList.remove('valid');
+                indicator.textContent = '●';
+                indicator.style.color = '#e74c3c';
+            }
+        }
+    }
+    
+    function validateTerms() {
+        if (!termsCheckbox) return true;
+        const isChecked = termsCheckbox.checked;
+        if (!isChecked) {
+            const wrapper = termsCheckbox.closest('.checkbox-wrapper');
+            if (wrapper) {
+                wrapper.style.animation = 'shake 0.5s ease';
+                setTimeout(() => {
+                    wrapper.style.animation = '';
+                }, 500);
+            }
+        }
+        return isChecked;
+    }
+    
+    if (registerPassword) {
+        registerPassword.addEventListener('input', checkPasswordStrength);
+        checkPasswordStrength();
+    }
+    
+    if (registerButton && registerPassword) {
+        registerButton.disabled = true;
+    }
+    
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            const isPasswordValid = checkPasswordStrength();
+            const isTermsValid = validateTerms();
+            
+            if (!isPasswordValid) {
+                e.preventDefault();
+                if (registerPassword) {
+                    registerPassword.classList.add('missing-field');
+                    setTimeout(() => {
+                        registerPassword.classList.remove('missing-field');
+                    }, 1000);
+                }
+                alert('Please meet all password requirements before registering.');
+                return false;
+            }
+            
+            if (!isTermsValid) {
+                e.preventDefault();
+                alert('Please accept the Terms & Conditions to continue.');
+                return false;
+            }
+        });
+    }
     
     tabBtns.forEach(btn => {
         btn.addEventListener('click', function() {
@@ -967,7 +1121,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 content.classList.remove('active');
                 if (content.id === tabId + '-content') {
                     content.classList.add('active');
-                    
                     setTimeout(() => {
                         const firstInput = content.querySelector('input');
                         if (firstInput) firstInput.focus();
@@ -976,18 +1129,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (tabId === 'register') {
-                setTimeout(() => {
-                    checkPasswordStrength();
-                }, 100);
+                setTimeout(checkPasswordStrength, 100);
             }
         });
     });
-    
-    const registerPassword = document.getElementById('registerPassword');
-    if (registerPassword) {
-        registerPassword.addEventListener('input', checkPasswordStrength);
-        checkPasswordStrength();
-    }
     
     setTimeout(() => {
         const firstMissingField = document.querySelector('.missing-field');
@@ -1000,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', function() {
             if (this.classList.contains('missing-field') && this.value.trim() !== '') {
                 this.classList.remove('missing-field');
-                const requirement = this.closest('.input-group').querySelector('.field-requirement');
+                const requirement = this.closest('.input-group')?.querySelector('.field-requirement');
                 if (requirement) {
                     requirement.style.display = 'none';
                 }
@@ -1008,73 +1153,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
-function checkPasswordStrength() {
-    const passwordInput = document.getElementById('registerPassword');
-    const registerButton = document.getElementById('registerButton');
-    
-    if (!passwordInput) return;
-    
-    const password = passwordInput.value;
-    
-    const requirements = {
-        length: password.length >= 6,
-        uppercase: /[A-Z]/.test(password),
-        number: /[0-9]/.test(password),
-        special: /[!@#$%^&*()\-_=+{};:,<.>]/.test(password)
-    };
-    
-    Object.keys(requirements).forEach(key => {
-        const requirement = document.getElementById(`req-${key}`);
-        const indicator = document.getElementById(`ind-${key}`);
-        
-        if (requirement && indicator) {
-            if (requirements[key]) {
-                requirement.classList.add('valid');
-                indicator.textContent = '✓';
-                indicator.style.color = '#2ecc71';
-            } else {
-                requirement.classList.remove('valid');
-                indicator.textContent = '●';
-                indicator.style.color = '#e74c3c';
-            }
-        }
-    });
-    
-    if (registerButton) {
-        const allValid = Object.values(requirements).every(req => req);
-        registerButton.disabled = !allValid;
-        
-        if (!allValid && password.length > 0) {
-            passwordInput.classList.add('missing-field');
-        } else {
-            passwordInput.classList.remove('missing-field');
-        }
-    }
-}
-
-function validateForm(formId) {
-    const form = document.getElementById(formId);
-    let isValid = true;
-    
-    if (form) {
-        const requiredInputs = form.querySelectorAll('input[required]');
-        
-        requiredInputs.forEach(input => {
-            if (!input.value.trim()) {
-                isValid = false;
-                input.classList.add('missing-field');
-                
-                const requirement = input.closest('.input-group').querySelector('.field-requirement');
-                if (requirement) {
-                    requirement.style.display = 'block';
-                }
-            }
-        });
-    }
-    
-    return isValid;
-}
 </script>
 </body>
 </html>
