@@ -123,7 +123,7 @@ if (!isset($_SESSION['email'])) {
    <footer>
   <div class="container">
     <div class="footer-col">
-      <h2>MOTO<div class="underline"><span></span></div></h2>
+      <h2>OUR MOTTO<div class="underline"><span></span></div></h2>
       <p class="footer-para">Innovation starts here – with machines designed for creators and professionals who demand more. Whether you’re editing, rendering, or building the future, our systems are ready to keep up with your vision.</p>
     </div>
     <div class="footer-col">
