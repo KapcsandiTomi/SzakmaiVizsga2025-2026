@@ -11,7 +11,7 @@ $lastUpdated = date("F j, Y");
     <title>Privacy Policy – <?= htmlspecialchars($siteName) ?></title>
     <link rel="icon" href="letoles.jpg" type="image/png">
     <style>
-        body { font-family: Inter, Arial, sans-serif; background:#f6f9fc; color:#153041; margin:0; padding:20px; }
+        body { font-family: cursive; background:#f6f9fc; color:#153041; margin:0; padding:20px; }
         .wrap { max-width:980px; margin:28px auto; background:#fff; padding:32px; border-radius:10px; box-shadow:0 8px 30px rgba(8,30,52,0.06); }
         header { display:flex; justify-content:space-between; align-items:center; }
         header h1 { margin:0; font-size:20px; }
