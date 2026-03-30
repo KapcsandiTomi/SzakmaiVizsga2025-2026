@@ -322,8 +322,8 @@ $avg_rating = $stats['avg_rating'];
         <a href="products.php" class="nav-item nav-link">Products</a>
         <a href="rateus.php" class="nav-item nav-link">RATE US</a>
         <div class="nav-item dropdown">
-          <a href="#" class="nav-link dropdown-toggle" id="contactDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            CONTACT
+          <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+            CONTACT <i class="fas fa-chevron-down ms-1"></i>
           </a>
           <ul class="dropdown-menu fade-up m-0" aria-labelledby="contactDropdown">
             <li><a href="writeUs.php" class="dropdown-item">WRITE US</a></li>
@@ -332,8 +332,8 @@ $avg_rating = $stats['avg_rating'];
         </div>
 
         <div class="nav-item dropdown">
-          <a href="#" class="nav-link dropdown-toggle" id="accountDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            MY ACCOUNT
+          <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+            MY ACCOUNT <i class="fas fa-chevron-down ms-1"></i>
           </a>
           <ul class="dropdown-menu fade-up m-0" aria-labelledby="accountDropdown">
             <li><a href="profile.php" class="dropdown-item">MY PROFILE</a></li>
