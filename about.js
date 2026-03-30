@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// === AGE CALCULATION ===
 function calculateAge(birthDate) {
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -26,10 +25,17 @@ function calculateAge(birthDate) {
     return age;
 }
 
-const birthDate = new Date(2006, 0, 1);
-const age = calculateAge(birthDate);
 
-// AGE
-document.getElementById("age").textContent = age;
-document.getElementById("age2").textContent = age;
-document.getElementById("age3").textContent = age;
+//ember
+const ember1 = new Date(2006, 8, 10); 
+const ember2 = new Date(2006, 4, 21); 
+const ember3 = new Date(2006, 6, 28); 
+
+const age1 = calculateAge(ember1);
+const age2 = calculateAge(ember2);
+const age3 = calculateAge(ember3);
+
+// Kiírás
+document.getElementById("age1").textContent = age1;
+document.getElementById("age2").textContent = age2;
+document.getElementById("age3").textContent = age3;
