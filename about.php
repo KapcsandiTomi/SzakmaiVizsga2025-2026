@@ -101,7 +101,7 @@ if (!isset($_SESSION['email'])) {
                 <p class="role">Full-Stack Developer • Designer • Backend Developer</p>
 
                 <p class="short-text">
-                    <b><span style="font-size: 1.6rem;">Tomi</span></b> is a <span id="age"></span>-year-old developer, is passionate about creating elegant and user-friendly web experiences.
+                    <b><span style="font-size: 1.6rem;">Tomi</span></b> is a <span id="age1"></span>-year-old developer, is passionate about creating elegant and user-friendly web experiences.
                     He focuses mainly on <b>front-end development</b>, crafting responsive and visually appealing interfaces using modern web technologies.
                     Beyond design, he also explores <b>back-end development</b>, giving him a broader understanding of how <b>front-end and server-side logic work together.</b>
                 </p>
