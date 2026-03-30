@@ -31,7 +31,7 @@ require_once 'handler/trackhandler.php';
         }
         
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: cursive; 
             background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
             min-height: 100vh;
             color: #333;
@@ -341,7 +341,7 @@ require_once 'handler/trackhandler.php';
         }
         
         .card-masked {
-            font-family: monospace;
+            font-family: cursive;
             letter-spacing: 2px;
         }
         
