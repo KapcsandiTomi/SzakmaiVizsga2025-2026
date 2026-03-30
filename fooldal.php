@@ -118,7 +118,7 @@ $avg_rating = $stats['avg_rating'];
             right: 25px;
             font-size: 8rem;
             color: rgba(102, 126, 234, 0.1);
-            font-family: Georgia, serif;
+            font-family: cursive;
             line-height: 1;
         }
         
