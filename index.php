@@ -89,7 +89,7 @@ function isMissingForgotField($fieldType, $missingFields) {
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: cursive;
             min-height: 100vh;
             display: flex;
             align-items: center;
