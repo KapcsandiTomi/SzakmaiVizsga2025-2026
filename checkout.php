@@ -115,7 +115,7 @@ unset($_SESSION['form_data']);
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: cursive;
             background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
             color: #004d40;
             line-height: 1.6;
