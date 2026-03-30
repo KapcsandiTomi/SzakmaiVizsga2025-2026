@@ -101,7 +101,7 @@ if (!isset($_SESSION['email'])) {
                 <p class="role">Full-Stack Developer • Designer • Backend Developer</p>
 
                 <p class="short-text">
-                    <b><span style="font-size: 1.6rem;">Tomi</span></b>, is a <span id="age"></span>-year-old developer, is passionate about creating elegant and user-friendly web experiences.
+                    <b><span style="font-size: 1.6rem;">Tomi</span></b> is a <span id="age"></span>-year-old developer, is passionate about creating elegant and user-friendly web experiences.
                     He focuses mainly on <b>front-end development</b>, crafting responsive and visually appealing interfaces using modern web technologies.
                     Beyond design, he also explores <b>back-end development</b>, giving him a broader understanding of how <b>front-end and server-side logic work together.</b>
                 </p>
@@ -109,7 +109,7 @@ if (!isset($_SESSION['email'])) {
                 <div class="hidden-text">
                     <p>
                         <h3><span>My Story</span></h3>
-                        <p>Tomi was born in <b>Isaszeg</b>, a small town, and ever since I was little, I have been fascinated by computers and programming. I have always been curious about <b>how games are made and how software works</b>. One of my favorite games as a child was <b>Minecraft</b>, because it allowed me to be <b>creative and experiment with building and exploring.</b></p>
+                        <p>Tomi was born in <b>Isaszeg</b>, a small town, and ever since he was little, he has been fascinated by computers and programming. Tomi has always been curious about <b>how games are made and how software works</b>. One of his favorite games as a child was <b>Minecraft</b>, because it allowed him to be <b>creative and experiment with building and exploring.</b></p>
                     </p>
                 </div>
 
@@ -140,7 +140,7 @@ if (!isset($_SESSION['email'])) {
                 <p class="role">Frontend Developer • UI/UX Designer</p>
 
                 <p class="short-text">
-                    <b><span style="font-size: 1.6rem;">Máté</span></b> is a <b><span id="age2"></span>-year-old frontend developer and designer</b> with a strong passion for creating modern, user-friendly digital experiences. He combines <b>technical skill with a keen eye for design,</b> focusing on clean interfaces and smooth interactions.
+                    <b><span style="font-size: 1.6rem;">Máté</span></b> is a <span id="age2"></span>-year-old frontend developer and designer with a strong passion for creating modern, user-friendly digital experiences. He combines <b>technical skill with a keen eye for design,</b> focusing on clean interfaces and smooth interactions.
                 </p>
 
                 <div class="hidden-text">
@@ -170,10 +170,10 @@ if (!isset($_SESSION['email'])) {
         </div>
         <div class="team-card">
             <div class="team-image">
-                <img src="img/HrustinszkiMarci.jpg" alt="Hrusztinszki Márton">
+                <img src="img/HrustinszkiMarci.jpg" alt="Hrustinszki Márton">
             </div>
             <div class="team-content">
-                <h3>Hrusztinszki Márton</h3>
+                <h3>Hrustinszki Márton</h3>
                 <p class="role">Searching Manager • Frontend Developer</p>
 
                 <p class="short-text">
