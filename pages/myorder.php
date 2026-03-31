@@ -219,10 +219,10 @@ $data = $handler->handleRequest();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aqua Mini Shop - My Orders</title>
-    <link rel="stylesheet" href="assets/css/myorder.css">
+    <link rel="stylesheet" href="../assets/css/myorder.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         :root {
             --aqua-primary: #00b4d8;
@@ -1282,11 +1282,11 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 </script>
 
-<script src="assets/js/javas.js"></script>
+<script src="../assets/js/javas.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://kit.fontawesome.com/yourkitid.js" crossorigin="anonymous"></script>
-<script src="assets/js/chat.js"></script>
-<script src="assets/js/myorder.js"></script>
+<script src="../assets/js/chat.js"></script>
+<script src="../assets/js/myorder.js"></script>
 </body>
 </html>
 

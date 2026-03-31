@@ -4,6 +4,14 @@
 // ====================
 session_start();
 
+ob_start(static function ($buffer) {
+    return str_replace(
+        ['href="products/', 'value="products/'],
+        ['href="../products/', 'value="../products/'],
+        $buffer
+    );
+});
+
 // HA NINCS EMAIL A SESSIONBEN → FŐOLDAL
 if (!isset($_SESSION['email'])) {
     header('Location: index.php');
@@ -119,11 +127,11 @@ if (!isset($_SESSION['favorites'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aqua Mini Shop - Products</title>
-    <link rel="stylesheet" href="assets/css/products.css">
+    <link rel="stylesheet" href="../assets/css/products.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         .product-item {
             display: flex;
@@ -1889,11 +1897,11 @@ if (!isset($_SESSION['favorites'])) {
 <?php endif; ?>
 
 </body>
-<script src="assets/js/javas.js"></script>
-<script src="assets/js/products.js"></script>
+<script src="../assets/js/javas.js"></script>
+<script src="../assets/js/products.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://kit.fontawesome.com/yourkitid.js" crossorigin="anonymous"></script>
-<script src="assets/js/chat.js"></script>
+<script src="../assets/js/chat.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Értesítés megjelenítése (ha van)

@@ -28,11 +28,11 @@ $avg_rating = $stats['avg_rating'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aqua Mini Shop - Main</title>
-    <link rel="stylesheet" href="assets/css/fooldal.css">
+    <link rel="stylesheet" href="../assets/css/fooldal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         .testimonials-container {
             max-width: 1200px;
@@ -361,15 +361,15 @@ $avg_rating = $stats['avg_rating'];
       <p>Machines are built to extend our hands, but innovations make them extend our possibilities.</p>
       <a href="products.php" class="btn">Explore Now →</a>
     </div>
-    <img src="img/aqau.jpg" alt="PC" style="border-radius: 100px;">
+    <img src="../img/aqau.jpg" alt="PC" style="border-radius: 100px;">
   </div>
 
   <div class="categories">
     <div class="small-container">
       <div class="row">
-        <div class="col-3"><img src="img/1.jpg" alt="PC"></div>
-        <div class="col-3"><img src="img/2.jpg" alt="PC"></div>
-        <div class="col-3"><img src="img/3.avif" alt="PC"></div>
+        <div class="col-3"><img src="../img/1.jpg" alt="PC"></div>
+        <div class="col-3"><img src="../img/2.jpg" alt="PC"></div>
+        <div class="col-3"><img src="../img/3.avif" alt="PC"></div>
       </div>
     </div>
 
@@ -377,7 +377,7 @@ $avg_rating = $stats['avg_rating'];
       <h2 class="title">Featured Products</h2>
       <div class="row">
         <div class="col-4">
-          <img src="img/bil.avif" alt="Billentyűzet">
+          <img src="../img/bil.avif" alt="Billentyűzet">
           <h4>Spirit of Gamer ELITE K70 RGB</h4>
           <div class="rating">
             <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star-o"></i>
@@ -385,7 +385,7 @@ $avg_rating = $stats['avg_rating'];
           <p>50.00$</p>
         </div>
         <div class="col-4">
-          <img src="img/videokartya.png" alt="Videókártya">
+          <img src="../img/videokartya.png" alt="Videókártya">
           <h4>RTX 5070 TI BY NVIDIA</h4>
           <div class="rating">
             <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i>
@@ -393,7 +393,7 @@ $avg_rating = $stats['avg_rating'];
           <p>250.00$</p>
         </div>
         <div class="col-4">
-          <img src="img/monitor.avif" alt="Monitor">
+          <img src="../img/monitor.avif" alt="Monitor">
           <h4>Oddesey 244 HZ MONITOR</h4>
           <div class="rating">
             <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i>
@@ -407,7 +407,7 @@ $avg_rating = $stats['avg_rating'];
   <div class="offer">
     <div class="small-container">
       <div class="row">
-        <div class="col-2"><img src="img/Png.png" alt="Különleges" class="offer-img"></div>
+        <div class="col-2"><img src="../img/Png.png" alt="Különleges" class="offer-img"></div>
         <div class="col-2">
           <p>Exclusively Available on MINISTORE!</p>
           <h1>GeForce RTX™ 5090 GAMING OC 32G</h1>  
@@ -547,8 +547,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<script src="assets/js/javas.js"></script>
-<script src="assets/js/chat.js"></script>
+<script src="../assets/js/javas.js"></script>
+<script src="../assets/js/chat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://kit.fontawesome.com/yourkitid.js" crossorigin="anonymous"></script>
 </body>

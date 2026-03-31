@@ -12,10 +12,10 @@ if (!isset($_SESSION['email'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aqua Mini Shop - Meet Our Team</title>
-    <link rel="stylesheet" href="assets/css/about.css">
+    <link rel="stylesheet" href="../assets/css/about.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
 </head>
 <body>
     <div class="container-fluid bg-light p-0">
@@ -94,7 +94,7 @@ if (!isset($_SESSION['email'])) {
     <div class="team-container">
         <div class="team-card">
             <div class="team-image">
-                <img src="img/KapcsiTomi.JPEG" alt="Kapcsándi Tamás">
+                <img src="../img/KapcsiTomi.JPEG" alt="Kapcsándi Tamás">
             </div>
             <div class="team-content">
                 <h3>Kapcsándi Tamás</h3>
@@ -133,7 +133,7 @@ if (!isset($_SESSION['email'])) {
         </div>
         <div class="team-card">
             <div class="team-image">
-                <img src="img/HajasMate.jpg" alt="Hajas Máté">
+                <img src="../img/HajasMate.jpg" alt="Hajas Máté">
             </div>
             <div class="team-content">
                 <h3>Hajas Máté</h3>
@@ -170,7 +170,7 @@ if (!isset($_SESSION['email'])) {
         </div>
         <div class="team-card">
             <div class="team-image">
-                <img src="img/HrustinszkiMarci.jpg" alt="Hrustinszki Márton">
+                <img src="../img/HrustinszkiMarci.jpg" alt="Hrustinszki Márton">
             </div>
             <div class="team-content">
                 <h3>Hrustinszki Márton</h3>
@@ -241,10 +241,10 @@ if (!isset($_SESSION['email'])) {
   </div>
 </footer>
 
-<script src="assets/js/javas.js"></script>
+<script src="../assets/js/javas.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="assets/js/chat.js"></script>
-<script src="assets/js/about.js"></script>
+<script src="../assets/js/chat.js"></script>
+<script src="../assets/js/about.js"></script>
 </body>
 </html>
 

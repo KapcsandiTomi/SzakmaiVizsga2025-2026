@@ -7,7 +7,7 @@ session_start();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Karbantartás - Aqua Mini Shop</title>
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         * {
             margin: 0;

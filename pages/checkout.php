@@ -96,7 +96,7 @@ unset($_SESSION['form_data']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aqua Mini Shop - Checkout</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         /*CSS */
         :root {

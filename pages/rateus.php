@@ -31,7 +31,7 @@ if(isset($_SESSION['success_message'])) {
     <meta charset="UTF-8">
     <title><?php echo $page_title; ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         * {
             margin: 0;

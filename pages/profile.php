@@ -39,6 +39,32 @@ if (!$user) {
 }
 
 $favorites = $handler->getUserFavorites();
+
+function normalizeFavoriteProductLink($productLink) {
+    $productLink = trim((string) $productLink);
+
+    if ($productLink === '') {
+        return '#';
+    }
+
+    if (preg_match('#^(https?:)?//#i', $productLink)) {
+        return $productLink;
+    }
+
+    if (strpos($productLink, '../products/') === 0) {
+        return $productLink;
+    }
+
+    if (strpos($productLink, 'products/') === 0) {
+        return '../' . $productLink;
+    }
+
+    if (preg_match('/^[A-Za-z0-9_-]+\.php$/', $productLink)) {
+        return '../products/' . $productLink;
+    }
+
+    return $productLink;
+}
 ?>
 
 <!DOCTYPE html>
@@ -47,11 +73,11 @@ $favorites = $handler->getUserFavorites();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aqua Mini Shop - My Profile</title>
-    <link rel="stylesheet" href="assets/css/profile.css">
+    <link rel="stylesheet" href="../assets/css/profile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         .alert-message {
             padding: 15px 20px;
@@ -612,7 +638,7 @@ $favorites = $handler->getUserFavorites();
                                 </div>
                                 
                                 <div class="favorite-actions">
-                                    <a href="<?php echo htmlspecialchars($favorite['product_link']); ?>" 
+                                    <a href="<?php echo htmlspecialchars(normalizeFavoriteProductLink($favorite['product_link'])); ?>" 
                                        class="btn-view">
                                         <i class="fas fa-eye me-1"></i> View
                                     </a>
@@ -703,10 +729,10 @@ setTimeout(function() {
 }, 5000);
 </script>
 
-<script src="assets/js/javas.js"></script>
+<script src="../assets/js/javas.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://kit.fontawesome.com/yourkitid.js" crossorigin="anonymous"></script>
-<script src="assets/js/chat.js"></script>
+<script src="../assets/js/chat.js"></script>
 </body>
 </html>
 

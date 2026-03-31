@@ -9,7 +9,7 @@ $lastUpdated = date("F j, Y");
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Privacy Policy – <?= htmlspecialchars($siteName) ?></title>
-    <link rel="icon" href="/Szakmai/letoles.jpg?v=1" type="image/jpeg">
+    <link rel="icon" href="/Szakmai/SzakmaiVizsga2025-2026/letoles.jpg?v=1" type="image/jpeg">
     <style>
         body { font-family: cursive; background:#f6f9fc; color:#153041; margin:0; padding:20px; }
         .wrap { max-width:980px; margin:28px auto; background:#fff; padding:32px; border-radius:10px; box-shadow:0 8px 30px rgba(8,30,52,0.06); }
