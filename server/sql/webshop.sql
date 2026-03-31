@@ -251,7 +251,7 @@ INSERT INTO `4` (name, email, password, profile_pic, is_admin) VALUES
 (
   'Admin User',
   'admin@gmail.com',
-  '$2y$10$e0NRgFZhzF0v4mQYpxV4..mTZP2fPy0bbLp2Q.qH7iZQZ8LEKPm3G',
+  '$2a$12$aXJKZlajILqPLy352YS0W.EGkIgSbg35ga5NnT/u73EyNvn8G0qA6',
   NULL,
   1
 );
