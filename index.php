@@ -244,6 +244,117 @@ function isMissingForgotField($fieldType, $missingFields) {
             display: flex;
             align-items: center;
         }
+
+        .password-field {
+            isolation: isolate;
+        }
+
+        .password-field .password-input {
+            padding-right: 88px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            bottom: 4px;
+            width: 54px;
+            border: none;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+                background: transparent;
+            color: #0a7b90;
+            cursor: pointer;
+                box-shadow: none;
+                transition: color 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
+            z-index: 2;
+        }
+
+        .toggle-password::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 12px;
+            bottom: 12px;
+            width: 1px;
+            background: linear-gradient(180deg, rgba(7, 185, 212, 0), rgba(7, 185, 212, 0.4), rgba(34, 174, 106, 0));
+            pointer-events: none;
+        }
+
+        .toggle-password:hover {
+            color: #075f6e;
+            transform: translateY(-1px);
+        }
+
+        .toggle-password:focus-visible {
+            outline: none;
+                box-shadow: 0 0 0 3px rgba(7, 185, 212, 0.16);
+        }
+
+        .eye-icon {
+            position: relative;
+            width: 22px;
+            height: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: currentColor;
+            transition: transform 0.2s ease;
+        }
+
+        .eye-icon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 2px solid currentColor;
+            border-radius: 75% 18%;
+            transform: rotate(-7deg);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+        }
+
+        .eye-pupil {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 0 3px rgba(7, 185, 212, 0.12);
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .eye-slash {
+            position: absolute;
+            width: 24px;
+            height: 2px;
+            border-radius: 999px;
+            background: currentColor;
+            transform: rotate(-30deg) scaleX(0.35);
+            opacity: 0;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            box-shadow: 0 0 10px rgba(7, 185, 212, 0.2);
+        }
+
+        .toggle-password.is-visible {
+            color: #0b6b57;
+              box-shadow: none;
+        }
+
+        .toggle-password:hover .eye-icon,
+        .toggle-password:focus-visible .eye-icon,
+        .toggle-password.is-visible .eye-icon {
+            transform: scale(1.08);
+        }
+
+        .toggle-password.is-visible .eye-pupil {
+            transform: scale(0.72);
+            opacity: 0.9;
+        }
+
+        .toggle-password.is-visible .eye-slash {
+            opacity: 1;
+            transform: rotate(-30deg) scaleX(1);
+        }
         
         .input-with-icon i {
             position: absolute;
@@ -775,6 +886,14 @@ function isMissingForgotField($fieldType, $missingFields) {
                 width: 100%;
             }
 
+            .password-field .password-input {
+                padding-right: 82px;
+            }
+
+            .toggle-password {
+                width: 50px;
+            }
+
             .checkbox-group,
             .remember-forgot-row,
             .divider {
@@ -841,11 +960,17 @@ function isMissingForgotField($fieldType, $missingFields) {
                     </div>
                     
                     <div class="input-group">
-                        <div class="input-with-icon">
+                        <div class="input-with-icon password-field">
                             <i class="fas fa-lock"></i>
-                            <input type="password" name="password" 
-                                   class="<?php echo isMissingLoginField('password', $missingFields); ?>"
+                            <input type="password" name="password" id="loginPassword"
+                                   class="password-input <?php echo isMissingLoginField('password', $missingFields); ?>"
                                    placeholder="Password" required>
+                            <button type="button" class="toggle-password" data-target="loginPassword" data-show-label="Show password" data-hide-label="Hide password" aria-label="Show password" aria-pressed="false">
+                                <span class="eye-icon" aria-hidden="true">
+                                    <span class="eye-pupil"></span>
+                                    <span class="eye-slash"></span>
+                                </span>
+                            </button>
                         </div>
                         <div class="field-requirement">Please enter your password</div>
                     </div>
@@ -885,11 +1010,17 @@ function isMissingForgotField($fieldType, $missingFields) {
                     </div>
                     
                     <div class="input-group">
-                        <div class="input-with-icon">
+                        <div class="input-with-icon password-field">
                             <i class="fas fa-lock"></i>
                             <input type="password" name="password" id="registerPassword" 
-                                   class="<?php echo isMissingField('password', $missingFields); ?>"
+                                   class="password-input <?php echo isMissingField('password', $missingFields); ?>"
                                    placeholder="Create password" required>
+                            <button type="button" class="toggle-password" data-target="registerPassword" data-show-label="Show password" data-hide-label="Hide password" aria-label="Show password" aria-pressed="false">
+                                <span class="eye-icon" aria-hidden="true">
+                                    <span class="eye-pupil"></span>
+                                    <span class="eye-slash"></span>
+                                </span>
+                            </button>
                         </div>
                         <div class="field-requirement">Password is required and must meet all requirements</div>
                         
@@ -977,21 +1108,33 @@ function isMissingForgotField($fieldType, $missingFields) {
                     </div>
                     
                     <div class="input-group">
-                        <div class="input-with-icon">
+                        <div class="input-with-icon password-field">
                             <i class="fas fa-lock"></i>
-                            <input type="password" name="new_password" 
-                                   class="<?php echo isMissingForgotField('new_password', $missingFields); ?>"
+                            <input type="password" name="new_password" id="forgotNewPassword"
+                                   class="password-input <?php echo isMissingForgotField('new_password', $missingFields); ?>"
                                    placeholder="New password" required>
+                            <button type="button" class="toggle-password" data-target="forgotNewPassword" data-show-label="Show new password" data-hide-label="Hide new password" aria-label="Show new password" aria-pressed="false">
+                                <span class="eye-icon" aria-hidden="true">
+                                    <span class="eye-pupil"></span>
+                                    <span class="eye-slash"></span>
+                                </span>
+                            </button>
                         </div>
                         <div class="field-requirement">Please enter a new password</div>
                     </div>
                     
                     <div class="input-group">
-                        <div class="input-with-icon">
+                        <div class="input-with-icon password-field">
                             <i class="fas fa-lock"></i>
-                            <input type="password" name="confirm_password" 
-                                   class="<?php echo isMissingForgotField('confirm_password', $missingFields); ?>"
+                            <input type="password" name="confirm_password" id="forgotConfirmPassword"
+                                   class="password-input <?php echo isMissingForgotField('confirm_password', $missingFields); ?>"
                                    placeholder="Confirm new password" required>
+                            <button type="button" class="toggle-password" data-target="forgotConfirmPassword" data-show-label="Show confirm password" data-hide-label="Hide confirm password" aria-label="Show confirm password" aria-pressed="false">
+                                <span class="eye-icon" aria-hidden="true">
+                                    <span class="eye-pupil"></span>
+                                    <span class="eye-slash"></span>
+                                </span>
+                            </button>
                         </div>
                         <div class="field-requirement">Please confirm your new password</div>
                     </div>
@@ -1062,6 +1205,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const registerPassword = document.getElementById('registerPassword');
     const registerButton = document.getElementById('registerButton');
     const termsCheckbox = document.getElementById('termsCheckbox');
+    const passwordToggles = document.querySelectorAll('.toggle-password');
     
     function checkPasswordStrength() {
         if (!registerPassword) return true;
@@ -1206,6 +1350,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    passwordToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const passwordInput = document.getElementById(targetId);
+            const showLabel = this.getAttribute('data-show-label') || 'Show password';
+            const hideLabel = this.getAttribute('data-hide-label') || 'Hide password';
+
+            if (!passwordInput) {
+                return;
+            }
+
+            const isVisible = passwordInput.type === 'text';
+            passwordInput.type = isVisible ? 'password' : 'text';
+            this.classList.toggle('is-visible', !isVisible);
+            this.setAttribute('aria-pressed', isVisible ? 'false' : 'true');
+            this.setAttribute('aria-label', isVisible ? showLabel : hideLabel);
+        });
+    });
+
     const resetCodeTimer = document.getElementById('resetCodeTimer');
     if (resetCodeTimer) {
         let remaining = parseInt(resetCodeTimer.dataset.remaining || '0', 10);
@@ -1233,4 +1396,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-
