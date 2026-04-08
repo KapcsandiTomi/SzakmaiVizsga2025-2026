@@ -12,6 +12,15 @@ if (!function_exists('amsNavActiveClass')) {
 
 $contactActive = amsNavActiveClass(['writeUs.php', 'faq.php'], $currentPage);
 $accountActive = amsNavActiveClass(['profile.php', 'myorder.php'], $currentPage);
+$adminReturnTo = '/Szakmai/pages/' . ltrim($currentPage, '/');
+$adminModalAutoOpen = isset($_GET['admin_prompt']) || isset($_GET['admin_error']);
+$adminErrorMessage = null;
+
+if (isset($_GET['admin_error'])) {
+    $adminErrorMessage = $_GET['admin_error'] === 'denied'
+        ? 'You do not have permission to open the admin panel.'
+        : 'Wrong password. Access denied.';
+}
 ?>
 
 <nav class="ams-user-navbar navbar navbar-expand-lg sticky-top">
@@ -22,10 +31,10 @@ $accountActive = amsNavActiveClass(['profile.php', 'myorder.php'], $currentPage)
         </a>
 
         <?php if (isset($_SESSION['is_admin']) && (int) $_SESSION['is_admin'] === 1): ?>
-            <a href="/Szakmai/admin/index.php" class="ams-admin-link">
+            <button type="button" class="ams-admin-link" data-admin-modal-open>
                 <i class="fas fa-cog" aria-hidden="true"></i>
                 <span>Admin</span>
-            </a>
+            </button>
         <?php endif; ?>
 
         <button
@@ -93,3 +102,98 @@ $accountActive = amsNavActiveClass(['profile.php', 'myorder.php'], $currentPage)
         </div>
     </div>
 </nav>
+
+<?php if (isset($_SESSION['is_admin']) && (int) $_SESSION['is_admin'] === 1): ?>
+    <div
+        id="amsAdminPasswordModal"
+        class="ams-admin-modal<?php echo $adminModalAutoOpen ? ' is-visible' : ''; ?>"
+        aria-hidden="<?php echo $adminModalAutoOpen ? 'false' : 'true'; ?>"
+        data-auto-open="<?php echo $adminModalAutoOpen ? 'true' : 'false'; ?>"
+    >
+        <div class="ams-admin-modal__card" role="dialog" aria-modal="true" aria-labelledby="amsAdminModalTitle">
+            <button type="button" class="ams-admin-modal__close" data-admin-modal-close aria-label="Close">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+
+            <div class="ams-admin-modal__icon">
+                <i class="fas fa-shield-alt" aria-hidden="true"></i>
+            </div>
+
+            <h3 id="amsAdminModalTitle">Give the Password</h3>
+            <p class="ams-admin-modal__text">Enter the admin password to continue.</p>
+
+            <?php if ($adminErrorMessage !== null): ?>
+                <div class="ams-admin-modal__error"><?php echo htmlspecialchars($adminErrorMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+            <?php endif; ?>
+
+            <form action="/Szakmai/handler/admin_access.php" method="POST" class="ams-admin-modal__form">
+                <input type="hidden" name="return_to" value="<?php echo htmlspecialchars($adminReturnTo, ENT_QUOTES, 'UTF-8'); ?>">
+                <label for="adminPasswordInput" class="ams-admin-modal__label">Password</label>
+                <input
+                    type="password"
+                    id="adminPasswordInput"
+                    name="admin_password"
+                    class="ams-admin-modal__input"
+                    placeholder="Give the Password"
+                    required
+                    autocomplete="current-password"
+                >
+                <div class="ams-admin-modal__actions">
+                    <button type="button" class="ams-admin-modal__secondary" data-admin-modal-close>Cancel</button>
+                    <button type="submit" class="ams-admin-modal__primary">Enter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('amsAdminPasswordModal');
+
+        if (!modal) {
+            return;
+        }
+
+        const passwordInput = modal.querySelector('#adminPasswordInput');
+        const openModal = function () {
+            modal.classList.add('is-visible');
+            modal.setAttribute('aria-hidden', 'false');
+
+            if (passwordInput) {
+                window.setTimeout(function () {
+                    passwordInput.focus();
+                }, 80);
+            }
+        };
+
+        const closeModal = function () {
+            modal.classList.remove('is-visible');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+
+        document.querySelectorAll('[data-admin-modal-open]').forEach(function (button) {
+            button.addEventListener('click', openModal);
+        });
+
+        modal.querySelectorAll('[data-admin-modal-close]').forEach(function (button) {
+            button.addEventListener('click', closeModal);
+        });
+
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && modal.classList.contains('is-visible')) {
+                closeModal();
+            }
+        });
+
+        if (modal.dataset.autoOpen === 'true') {
+            openModal();
+        }
+    });
+    </script>
+<?php endif; ?>
