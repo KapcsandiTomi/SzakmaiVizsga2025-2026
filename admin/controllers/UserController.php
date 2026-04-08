@@ -20,8 +20,6 @@ class UserController {
     }
     
     public function delete($id) {
-        session_start();
-        
         if ($id == $_SESSION['user_id']) {
             $_SESSION['error'] = "You cannot delete yourself!";
             header("Location: index.php?page=users");
