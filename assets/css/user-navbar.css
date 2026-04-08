@@ -150,6 +150,7 @@
   gap: 8px;
   color: #0e2533;
   background: linear-gradient(135deg, #98f0ff, #38d4ff);
+  border: 0;
   border-radius: 999px;
   padding: 8px 14px;
   font-family: 'Exo 2', sans-serif;
@@ -159,11 +160,151 @@
   font-weight: 700;
   text-decoration: none;
   margin-right: 12px;
+  cursor: pointer;
 }
 
 .ams-admin-link:hover {
   color: #08161f;
   filter: brightness(1.06);
+}
+
+.ams-admin-link:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.38);
+  outline-offset: 2px;
+}
+
+.ams-admin-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 12, 20, 0.72);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  z-index: 2000;
+}
+
+.ams-admin-modal.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.ams-admin-modal__card {
+  position: relative;
+  width: min(100%, 420px);
+  background: linear-gradient(160deg, #081a29, #0d2a3c);
+  border: 1px solid rgba(120, 227, 255, 0.24);
+  border-radius: 22px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+  padding: 28px 24px 22px;
+  color: #f4fbff;
+}
+
+.ams-admin-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  color: rgba(244, 251, 255, 0.72);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.ams-admin-modal__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, #98f0ff, #38d4ff);
+  color: #062033;
+  font-size: 1.35rem;
+}
+
+.ams-admin-modal__card h3 {
+  margin: 0 0 8px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.04em;
+}
+
+.ams-admin-modal__text {
+  margin: 0 0 18px;
+  color: rgba(244, 251, 255, 0.82);
+  font-size: 0.95rem;
+}
+
+.ams-admin-modal__error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 86, 86, 0.14);
+  border: 1px solid rgba(255, 125, 125, 0.32);
+  color: #ffd8d8;
+  font-size: 0.9rem;
+}
+
+.ams-admin-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ams-admin-modal__label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(244, 251, 255, 0.78);
+}
+
+.ams-admin-modal__input {
+  width: 100%;
+  border: 1px solid rgba(120, 227, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  padding: 12px 14px;
+}
+
+.ams-admin-modal__input:focus {
+  outline: none;
+  border-color: #67e9ff;
+  box-shadow: 0 0 0 3px rgba(103, 233, 255, 0.18);
+}
+
+.ams-admin-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.ams-admin-modal__secondary,
+.ams-admin-modal__primary {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ams-admin-modal__secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f4fbff;
+}
+
+.ams-admin-modal__primary {
+  background: linear-gradient(135deg, #98f0ff, #38d4ff);
+  color: #062033;
 }
 
 .ams-menu-toggle {
