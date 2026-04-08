@@ -15,6 +15,11 @@ if ($_SESSION['is_admin'] != 1) {
     exit();
 }
 
+if (empty($_SESSION['admin_gate_passed'])) {
+    header("Location: /Szakmai/pages/fooldal.php?admin_prompt=1");
+    exit();
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
