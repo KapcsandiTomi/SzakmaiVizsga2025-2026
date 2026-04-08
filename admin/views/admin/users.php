@@ -80,7 +80,7 @@ require_once $navbarPath;
                                     
                                     <a href="index.php?page=users&action=delete&id=<?php echo $user['id']; ?>" 
                                        class="btn btn-danger btn-sm" 
-                                       onclick="return confirm('Are you sure you want to delete this user?');">
+                                       onclick="deleteUser(<?php echo (int) $user['id']; ?>); return false;">
                                         <i class="fas fa-trash-alt"></i> Delete
                                     </a>
                                 <?php else: ?>
