@@ -32,10 +32,51 @@ function deleteOrder(orderId) {
 }
 
 
-function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-        window.location.href = 'index.php?page=users&action=delete&id=' + userId;
+function ensureDeleteUserToast() {
+    let toastEl = document.getElementById('deleteUserToast');
+    if (toastEl) {
+        return toastEl;
     }
+
+    const container = document.createElement('div');
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1080';
+    container.innerHTML = `
+        <div id="deleteUserToast" class="toast border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+            <div class="toast-header bg-danger text-white">
+                <i class="fas fa-user-times me-2"></i>
+                <strong class="me-auto">Delete User</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <p class="mb-3">Are you sure you want to delete the user?</p>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-action="cancel">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-danger" data-action="confirm">Delete</button>
+                </div>
+            </div>
+        </div>`;
+
+    document.body.appendChild(container);
+    return document.getElementById('deleteUserToast');
+}
+
+function deleteUser(userId) {
+    const toastEl = ensureDeleteUserToast();
+    const toastInstance = bootstrap.Toast.getOrCreateInstance(toastEl);
+    const confirmBtn = toastEl.querySelector('[data-action="confirm"]');
+    const cancelBtn = toastEl.querySelector('[data-action="cancel"]');
+
+    confirmBtn.onclick = function() {
+        toastInstance.hide();
+        window.location.href = 'index.php?page=users&action=delete&id=' + userId;
+    };
+
+    cancelBtn.onclick = function() {
+        toastInstance.hide();
+    };
+
+    toastInstance.show();
 }
 
 setTimeout(() => {
