@@ -6,4 +6,5 @@ HRISTINSZKI MÁRTON ZOLTÁN
 FÜLEKI JÓZSEF
 
 SZAKAMI A MAPPA NEVE ---> localhost/Szakmai
+
 Admin oldalhoz a jelszó: G7$kP!9zQ@4Lm#Xv2R^aW8tB
