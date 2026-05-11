@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../handler/trackhandler.php';
 ?>
 
@@ -565,6 +565,7 @@ require_once __DIR__ . '/../handler/trackhandler.php';
     <?php endif; ?>
     
     <?php if ($data['trackingData'] && empty($data['error'])): 
+        $order = $data['trackingData']['order'] ?? [];
         $statusInfo = $data['trackingData']['status_info'];
         $progress = $data['trackingData']['progress'];
         $currentStatus = $order['status'] ?? 'Not Processed';
@@ -647,7 +648,7 @@ require_once __DIR__ . '/../handler/trackhandler.php';
                     <strong>Payment Method:</strong><br>
                     <?php echo htmlspecialchars($order['card_type'] ?? 'Credit Card'); ?><br>
                     <strong>Card Number:</strong> 
-                    <span class="card-masked"><?php echo $data['maskedCard']; ?></span><br>
+                    <span class="card-masked"><?php echo htmlspecialchars($data['maskedCard'] ?? 'N/A'); ?></span><br>
                     <strong>Expiry:</strong> <?php echo htmlspecialchars($order['expiry'] ?? 'N/A'); ?><br>
                     <strong>Status:</strong> 
                     <span style="color: var(--success); font-weight: 600;">Paid</span><br>
