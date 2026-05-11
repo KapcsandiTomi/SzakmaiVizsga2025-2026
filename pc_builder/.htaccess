@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /Szakmai/pc_builder/
+    
+    # Ha a fájl vagy könyvtár nem létezik
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Irányítsd az index.php-re
+    RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>
