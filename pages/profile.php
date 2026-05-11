@@ -128,6 +128,13 @@ function normalizeFavoriteProductLink($productLink) {
             gap: 5px;
         }
         
+        .form-note {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+        
         .input-error {
             border-color: #f44336 !important;
             background: rgba(244, 67, 54, 0.05) !important;
@@ -439,6 +446,7 @@ include __DIR__ . '/includes/user-navbar.php';
                                    required 
                                    class="<?php echo $profile_error ? 'input-error' : ''; ?>">
                         </div>
+                        <div class="form-note">When changing email, only gmail.com or freemail.com addresses are allowed.</div>
                     </div>
                     
                     <button type="submit" name="update_profile" class="btn-save">
