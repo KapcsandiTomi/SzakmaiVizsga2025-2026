@@ -61,6 +61,15 @@ class ProfileHandler {
             return;
         }
         
+        if ($newEmail !== $this->currentUser['email']) {
+            $emailDomain = strtolower(substr(strrchr($newEmail, '@'), 1));
+            $allowedDomains = ['gmail.com', 'freemail.com'];
+            if (!in_array($emailDomain, $allowedDomains, true)) {
+                $_SESSION['profile_error'] = "When changing email, only gmail.com or freemail.com addresses are allowed.";
+                return;
+            }
+        }
+        
         if (strlen($newName) < 3) {
             $_SESSION['profile_error'] = "Username must be at least 3 characters!";
             return;
