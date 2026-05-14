@@ -146,7 +146,7 @@ class CheckoutHandler {
         $emailResult = $this->sendEmails($orderId, $data, $totals);
         
         if (!$emailResult['success']) {
-            error_log("Email sending failed for order #" . $orderId . ": " . $emailResult['error']);
+            error_log("Email sending failed for order #" . $orderId . ": " . ($emailResult['error'] ?? 'Unknown error'));
         }
         
         return [
