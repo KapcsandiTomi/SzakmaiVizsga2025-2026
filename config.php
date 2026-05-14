@@ -34,7 +34,7 @@ try {
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_USERNAME', 'kapcsitomo2022@gmail.com');
-define('SMTP_PASSWORD', 'flqt nccv jkql zqgx'); 
+define('SMTP_PASSWORD', 'cnap eowc ucrb jkyi');
 define('SMTP_FROM_EMAIL', 'kapcsitomo2022@gmail.com');
 define('SMTP_FROM_NAME', 'Aqua Mini Shop');
 define('SMTP_SECURE', 'tls');
